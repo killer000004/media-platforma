@@ -1,8 +1,7 @@
-node_modules/
-data/*.db
-data/*.json
-public/uploads/*
-!public/uploads/.gitkeep
-.env
-cookies.txt
 ~$*.xlsx
+node_modules/
+.env
+data/
+npm-debug.log*
+public/uploads/students/*
+!public/uploads/students/.gitkeep

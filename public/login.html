@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kirish — Iqtisodiyot Fakulteti</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h1>Iqtisodiyot Fakulteti</h1>
+    <p class="subtitle">Talabalar bazasiga kirish</p>
+    <form id="loginForm">
+      <label>
+        Login
+        <input type="text" name="username" autocomplete="username" required autofocus />
+      </label>
+      <label>
+        Parol
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit">Kirish</button>
+      <p id="loginError" class="error-text" hidden></p>
+    </form>
+  </div>
+  <script src="/js/login.js"></script>
+</body>
+</html>
