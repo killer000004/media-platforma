@@ -583,12 +583,21 @@
 
         // Google Visualization API (JSONP) orqali ma'lumot yuklash — CORS muammosiz
 
-        // Bir qator ma'lumotni HTML qatorga aylantiradi
-        function createStudentRow(row, index) {
-            const r = (i) => (row[i] != null && row[i] !== '') ? row[i] : '-';
+        // Sheet ustunlari => jadval ustunlariga moslashtirish
+        // Sizning Sheet: A:Rasm | B:Ism | C:Tug'sana | D:Jinsi | E:Yo'nalish |
+        // F:Telefon | G:Tug'joy | H:Manzil | I:Otasi | J:Onasi | K:Oilaviy | L:Ijtimoiy | M:Yetimlik
+        // "Uy-joy" ustuni Sheet da yo'q, shuning uchun indeks 8 bo'sh
+        function mapRow(row) {
+            const src = [0,1,2,3,4,5,6,7,null,8,9,10,11,12];
+            return src.map(i => (i !== null && row[i] != null && row[i] !== '') ? row[i] : '-');
+        }
 
-            // Rasm URL: agar =IMAGE("...") formula bo'lsa, ichidagi URL ni ajratib olamiz
-            let rawUrl = (row[0] != null && row[0] !== '') ? String(row[0]).trim() : '';
+        // Bir qator ma'lumotni HTML qatorga aylantiradi
+        function createStudentRow(rawRow, index) {
+            const row = mapRow(rawRow);
+            const r = (i) => row[i] ?? '-';
+
+            let rawUrl = (rawRow[0] != null && rawRow[0] !== '') ? String(rawRow[0]).trim() : '';
             const imgMatch = rawUrl.match(/=IMAGE\s*\(\s*"([^"]+)"\s*\)/i);
             if (imgMatch) rawUrl = imgMatch[1];
             const photoSrc = (rawUrl && rawUrl !== '' && rawUrl !== '-')
