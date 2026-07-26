@@ -635,7 +635,7 @@
             document.getElementById('studentCountBadge').textContent = `${rows.length} ta`;
         }
 
-        // Simple CSV parse
+        // CSV parse (oddiy va qo'shtirnoqli qiymatlarni tushunadi)
         function parseCSV(text) {
             const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
             const rows = [];
@@ -658,7 +658,8 @@
             const tbody = document.getElementById('studentsTableBody');
             tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">Yuklanmoqda...</td></tr>';
 
-            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GOOGLE_SHEET_GID}`;
+            // export?format=csv — CORS muammosi yo'q, Access-Control-Allow-Origin: *
+            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
 
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 15000);
@@ -678,7 +679,7 @@
                 .catch(err => {
                     clearTimeout(timeout);
                     console.error('Google Sheets xatosi:', err);
-                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">Google Sheets dan yuklab bo\'lmadi.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">Google Sheets dan yuklab bo\'lmadi. Sheet → Share → "Anyone with the link" qiling.</td></tr>';
                 });
         }
 
