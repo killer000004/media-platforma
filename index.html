@@ -666,20 +666,22 @@
 
             fetch(url, { signal: controller.signal })
                 .then(r => {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
                     return r.text();
                 })
                 .then(csv => {
                     clearTimeout(timeout);
+                    if (!csv || csv.trim() === '') throw new Error('Bo\'sh javob keldi');
                     const rows = parseCSV(csv);
-                    const dataRows = rows.slice(1); // skip header
-                    console.log('Google Sheets ma\'lumoti:', dataRows);
+                    if (rows.length < 2) throw new Error('Ma\'lumot topilmadi (sarlavha bor, qatorlar yo\'q)');
+                    const dataRows = rows.slice(1);
+                    console.log('Google Sheets ma\'lumoti:', dataRows.length + ' qator');
                     renderStudents(dataRows);
                 })
                 .catch(err => {
                     clearTimeout(timeout);
                     console.error('Google Sheets xatosi:', err);
-                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">Google Sheets dan yuklab bo\'lmadi. Sheet → Share → "Anyone with the link" qiling.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">Xatolik: ' + err.message + '<br><br>Sheet → Share → "Anyone with the link" → Viewer qiling.</td></tr>';
                 });
         }
 
