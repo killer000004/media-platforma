@@ -1,7 +1,0 @@
-~$*.xlsx
-node_modules/
-.env
-data/
-npm-debug.log*
-public/uploads/students/*
-!public/uploads/students/.gitkeep
