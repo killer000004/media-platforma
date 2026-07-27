@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ExcelJS (rasmli Excel yaratish uchun) -->
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <!-- SheetJS (Excelga yuklash uchun kutubxona) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -111,6 +111,27 @@
                         </tr>
                     </thead>
                     <tbody id="studentsTableBody" class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">1</td>
+                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                            <td class="p-3 font-medium">Ahmadov Ahadbek Shermatboy o'g'li</td>
+                            <td class="p-3">2005-12-07</td>
+                            <td class="p-3">Erkak</td>
+                            <td class="p-3">Iqtisodiyot / ECO 24-02</td>
+                            <td class="p-3">941798696</td>
+                            <td class="p-3">Xorazm viloyati Xonqa tumani...</td>
+                            <td class="p-3">Toshkent shahar Chilonzor tumani...</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3">Xasanov Shermatboy...</td>
+                            <td class="p-3">Karimova Sharofat...</td>
+                            <td class="p-3">Oilaasiz</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3 flex gap-2">
+                                <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
+                                <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -332,7 +353,7 @@
                     <tbody class="divide-y divide-gray-200">
                         <tr class="hover:bg-gray-50">
                             <td class="p-3">1</td>
-                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm" onerror="this.src='https://via.placeholder.com/40'"></td>
+                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
                             <td class="p-3 font-medium">Ahmadov Ahadbek Shermatboy o'g'li</td>
                             <td class="p-3">2005-12-07</td>
                             <td class="p-3">Erkak</td>
@@ -349,8 +370,8 @@
     <!-- YANGI TALABA QO'SHISH MODAL OYNASI -->
     <div id="addStudentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 id="studentModalTitle" class="text-xl font-bold text-gray-800 mb-4">Yangi talaba qo'shish</h3>
-            <form id="addStudentForm" onsubmit="handleStudentSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Yangi talaba ma'lumotini qo'shish</h3>
+            <form id="addStudentForm" onsubmit="saveNewStudent(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Rasm yuklash</label>
                     <input type="file" id="stPhoto" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
@@ -492,138 +513,68 @@
 
     <!-- JavaScript skriptlari -->
     <script>
-        // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH (RASMLAR BILAN) ---
-        async function exportToExcel() {
+        // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
+        function exportToExcel() {
             const table = document.querySelector('#studentsSection table');
             if (!table) return;
 
-            const ths = table.querySelectorAll('thead th');
-            const trs = table.querySelectorAll('tbody tr');
-
-            // ExcelJS ishchi kitobi va varaq yaratish
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Talabalar');
-
-            // Sarlavhalar (Amallar ustunisiz)
+            const rowsData = [];
             const headers = [];
-            ths.forEach((th, i) => { if (i < ths.length - 1) headers.push(th.innerText.trim()); });
-            const headerRow = worksheet.addRow(headers);
-            headerRow.font = { bold: true, size: 11, name: 'Arial' };
-            headerRow.height = 22;
 
-            // Ustun kengliklari
-            worksheet.columns = [
-                { width: 4 }, { width: 10 }, { width: 30 }, { width: 13 },
-                { width: 7 }, { width: 22 }, { width: 13 }, { width: 28 },
-                { width: 28 }, { width: 10 }, { width: 22 }, { width: 22 },
-                { width: 10 }, { width: 16 }, { width: 16 }
-            ];
-
-            for (const tr of trs) {
-                const tds = tr.querySelectorAll('td');
-                const rowData = [];
-                let imgBuffer = null;
-                let imgExt = 'png';
-
-                for (let i = 0; i < tds.length - 1; i++) {
-                    if (i === 1) {
-                        const imgEl = tds[i].querySelector('img');
-                        if (imgEl && imgEl.src) {
-                            try {
-                                const resp = await fetch(imgEl.src);
-                                const blob = await resp.blob();
-                                const ab = await blob.arrayBuffer();
-                                imgBuffer = ab;
-                                imgExt = blob.type === 'image/png' ? 'png' : 'jpeg';
-                            } catch (e) {
-                                console.warn('Rasm yuklanmadi:', imgEl.src, e);
-                            }
-                        }
-                        rowData.push('');
-                    } else {
-                        rowData.push(tds[i].textContent.trim());
-                    }
+            // 1. Sarlavhalar (Rasm ustuni ham qo'shiladi, oxirgi Amallar tashlanadi)
+            const ths = table.querySelectorAll('thead th');
+            ths.forEach((th, index) => {
+                if (index !== ths.length - 1) {
+                    headers.push(th.innerText.trim());
                 }
-
-                const addedRow = worksheet.addRow(rowData);
-                const rowIdx = addedRow.number - 1;
-
-                if (imgBuffer) {
-                    try {
-                        const imageId = workbook.addImage({ buffer: imgBuffer, extension: imgExt });
-                        worksheet.addImage(imageId, {
-                            tl: { col: 1, row: rowIdx },
-                            ext: { width: 32, height: 32 },
-                            editAs: 'oneCell'
-                        });
-                    } catch (e) {
-                        console.warn('Rasm qo\'shilmadi:', e);
-                    }
-                    addedRow.height = 34;
-                }
-            }
-
-            // Yuklab olish
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'Talabalar_malumoti.xlsx';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-        }
+            rowsData.push(headers);
 
-        // --- MAHALLIY MA'LUMOTLAR (Google Sheets dan uzilgan) ---
-        function loadStudentsFromSheet() {
-            const sampleData = [
-                ['', 'Ahmadov Ahadbek Shermatboy o\'g\'li', '2005-12-07', 'Erkak', 'Iqtisodiyot / ECO 24-02', '941798696', 'Xorazm viloyati Xonqa tumani', 'Toshkent shahar Chilonzor tumani', 'Xasanov Shermatboy Ahmedovich', 'Karimova Sharofat Bog\'ibekovna', 'Oilaasiz', 'Temir daftar', 'Chin yetim'],
-                ['', 'Valiyeva Odina Baxtiyor qizi', '2006-03-15', 'Ayol', 'Iqtisodiyot / ECO 24-01', '901234567', 'Samarqand viloyati', 'Toshkent shahar', 'Baxtiyorov Vali', 'Valiyeva Zulfiya', 'Oilaasiz', '', ''],
-                ['', 'Karimov Shohruh Botir o\'g\'li', '2005-08-22', 'Erkak', 'Fizika / FIZ 24-01', '935678901', 'Buxoro viloyati', 'Toshkent shahar Yakkasaroy', 'Botirov Karim', 'Karimova Mohichehra', 'Oila', '', ''],
-                ['', 'Nurullayeva Sevara Alisher qizi', '2006-01-10', 'Ayol', 'Iqtisodiyot / ECO 24-02', '994567890', 'Andijon viloyati', 'Toshkent shahar', 'Alisherov Nurulla', 'Nurullayeva Dilnoza', 'Oilaasiz', 'Yolg\'iz ona', 'Yetim'],
+            // 2. Qatorlar ma'lumotlari
+            const trs = table.querySelectorAll('tbody tr');
+            trs.forEach(tr => {
+                const rowData = [];
+                const tds = tr.querySelectorAll('td');
+                tds.forEach((td, index) => {
+                    if (index !== tds.length - 1) {
+                        // Agar bu rasm ustuni (1-indeks) bo'lsa, uning src manzilini olamiz
+                        if (index === 1) {
+                            const img = td.querySelector('img');
+                            rowData.push(img ? img.src : '');
+                        } else {
+                            rowData.push(td.innerText.trim());
+                        }
+                    }
+                });
+                rowsData.push(rowData);
+            });
+
+            // 3. SheetJS yordamida Excel fayl yaratish
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rowsData);
+
+            ws['!cols'] = [
+                { wch: 5 },  // #
+                { wch: 30 }, // Rasm havolasi
+                { wch: 35 }, // Ism familiya o'chestva
+                { wch: 15 }, // Tug'ilgan sana
+                { wch: 10 }, // Jinsi
+                { wch: 25 }, // Yo'nalish / Guruh
+                { wch: 15 }, // Telefon
+                { wch: 30 }, // Tug'ilgan joyi
+                { wch: 30 }, // Yashash manzili
+                { wch: 15 }, // Uy-joy
+                { wch: 25 }, // Otasi
+                { wch: 25 }, // Onasi
+                { wch: 15 }, // Oilaviy holati
+                { wch: 15 }, // Ijtimoiy toifa
+                { wch: 15 }  // Yetimlik toifasi
             ];
-            renderStudents(sampleData);
+
+            XLSX.utils.book_append_sheet(wb, ws, "Talabalar");
+            XLSX.writeFile(wb, "Talabalar_malumoti.xlsx");
         }
 
-        // Sheet qatorini jadval qatoriga aylantiradi
-        function createStudentRow(row, index) {
-            const r = (i) => (row[i] != null && row[i] !== '') ? row[i] : '-';
-            const photoSrc = (row[0] && row[0] !== '' && row[0] !== '-')
-                ? row[0] : 'https://via.placeholder.com/40';
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-gray-50';
-            tr.innerHTML = `
-                <td class="p-3">${index + 1}</td>
-                <td class="p-3"><img src="${photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm" onerror="this.src='https://via.placeholder.com/40'"></td>
-                <td class="p-3 font-medium">${r(1)}</td>
-                <td class="p-3">${r(2)}</td>
-                <td class="p-3">${r(3)}</td>
-                <td class="p-3">${r(4)}</td>
-                <td class="p-3">${r(5)}</td>
-                <td class="p-3">${r(6)}</td>
-                <td class="p-3">${r(7)}</td>
-                <td class="p-3">${r(8)}</td>
-                <td class="p-3">${r(9)}</td>
-                <td class="p-3">${r(10)}</td>
-                <td class="p-3">${r(11)}</td>
-                <td class="p-3">${r(12)}</td>
-                <td class="p-3">${r(13)}</td>
-                <td class="p-3 flex gap-2">
-                    <button onclick="editStudent(this)" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
-                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
-                </td>`;
-            return tr;
-        }
-
-        function renderStudents(rows) {
-            const tbody = document.getElementById('studentsTableBody');
-            tbody.innerHTML = '';
-            rows.forEach((row, i) => tbody.appendChild(createStudentRow(row, i)));
-            document.getElementById('studentCountBadge').textContent = `${rows.length} ta`;
-        }
         function updateGroupSelects() {
             const groupRows = document.querySelectorAll('#groupsTableBody tr');
             let optionsHtml = '<option value="">Guruhni tanlang</option>';
@@ -644,7 +595,6 @@
 
         window.onload = function() {
             updateGroupSelects();
-            loadStudentsFromSheet();
         };
 
         function handleLogin(event) {
@@ -710,131 +660,71 @@
             if (section === 'statistics') statsSec.classList.remove('hidden');
         }
 
-        let editingRow = null;
-
-        function openAddStudentModal() {
-            editingRow = null;
-            document.getElementById('studentModalTitle').textContent = 'Yangi talaba qo\'shish';
-            document.getElementById('addStudentForm').reset();
-            document.getElementById('stPhoto').value = '';
+        function openAddStudentModal() { 
             updateGroupSelects();
-            document.getElementById('addStudentModal').classList.remove('hidden');
+            document.getElementById('addStudentModal').classList.remove('hidden'); 
         }
+        function closeAddStudentModal() { document.getElementById('addStudentModal').classList.add('hidden'); document.getElementById('addStudentForm').reset(); }
 
-        function closeAddStudentModal() {
-            editingRow = null;
-            document.getElementById('addStudentModal').classList.add('hidden');
-            document.getElementById('addStudentForm').reset();
-        }
-
-        function editStudent(button) {
-            const row = button.closest('tr');
-            const cells = row.querySelectorAll('td');
-            const img = cells[1].querySelector('img');
-
-            editingRow = row;
-            document.getElementById('studentModalTitle').textContent = 'Talabani tahrirlash';
-            updateGroupSelects();
-
-            document.getElementById('stFullName').value = cells[2].textContent.trim();
-            document.getElementById('stBirthDate').value = cells[3].textContent.trim();
-            document.getElementById('stGender').value = cells[4].textContent.trim();
-            document.getElementById('stGroup').value = cells[5].textContent.trim();
-            document.getElementById('stPhone').value = cells[6].textContent.trim();
-            document.getElementById('stBirthPlace').value = cells[7].textContent.trim();
-            document.getElementById('stAddress').value = cells[8].textContent.trim();
-            document.getElementById('stHousing').value = cells[9].textContent.trim();
-            document.getElementById('stFather').value = cells[10].textContent.trim() === '-' ? '' : cells[10].textContent.trim();
-            document.getElementById('stMother').value = cells[11].textContent.trim() === '-' ? '' : cells[11].textContent.trim();
-            document.getElementById('stFamilyStatus').value = cells[12].textContent.trim();
-            document.getElementById('stSocialCategory').value = cells[13].textContent.trim() === '-' ? '' : cells[13].textContent.trim();
-            document.getElementById('stOrphanCategory').value = cells[14].textContent.trim() === '-' ? '' : cells[14].textContent.trim();
-
-            document.getElementById('addStudentModal').classList.remove('hidden');
-        }
-
-        function getFormData() {
+        function saveNewStudent(event) {
+            event.preventDefault();
+            
             const photoInput = document.getElementById('stPhoto');
-            let photoSrc = "https://via.placeholder.com/40";
+            let photoSrc = "https://via.placeholder.com/40"; // Agar rasm tanlanmasa standart holat
+
             if (photoInput.files && photoInput.files[0]) {
                 photoSrc = URL.createObjectURL(photoInput.files[0]);
             }
-            return {
-                photoSrc,
-                fullName: document.getElementById('stFullName').value,
-                birthDate: document.getElementById('stBirthDate').value,
-                gender: document.getElementById('stGender').value,
-                group: document.getElementById('stGroup').value,
-                phone: document.getElementById('stPhone').value,
-                birthPlace: document.getElementById('stBirthPlace').value,
-                address: document.getElementById('stAddress').value,
-                housing: document.getElementById('stHousing').value,
-                father: document.getElementById('stFather').value || '-',
-                mother: document.getElementById('stMother').value || '-',
-                familyStatus: document.getElementById('stFamilyStatus').value,
-                socialCategory: document.getElementById('stSocialCategory').value || '-',
-                orphanCategory: document.getElementById('stOrphanCategory').value || '-'
-            };
-        }
 
-        function handleStudentSubmit(event) {
-            event.preventDefault();
-            if (editingRow) {
-                saveEditedStudent();
-            } else {
-                saveNewStudent();
-            }
-        }
+            const fullName = document.getElementById('stFullName').value;
+            const birthDate = document.getElementById('stBirthDate').value;
+            const gender = document.getElementById('stGender').value;
+            const group = document.getElementById('stGroup').value;
+            const phone = document.getElementById('stPhone').value;
+            const birthPlace = document.getElementById('stBirthPlace').value;
+            const address = document.getElementById('stAddress').value;
+            const housing = document.getElementById('stHousing').value;
+            const father = document.getElementById('stFather').value || '-';
+            const mother = document.getElementById('stMother').value || '-';
+            const familyStatus = document.getElementById('stFamilyStatus').value;
+            const socialCategory = document.getElementById('stSocialCategory').value || '-';
+            const orphanCategory = document.getElementById('stOrphanCategory').value || '-';
 
-        function buildStudentRowHtml(d, index) {
-            return `
-                <td class="p-3">${index}</td>
-                <td class="p-3"><img src="${d.photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm" onerror="this.src='https://via.placeholder.com/40'"></td>
-                <td class="p-3 font-medium">${d.fullName}</td>
-                <td class="p-3">${d.birthDate}</td>
-                <td class="p-3">${d.gender}</td>
-                <td class="p-3">${d.group}</td>
-                <td class="p-3">${d.phone}</td>
-                <td class="p-3">${d.birthPlace}</td>
-                <td class="p-3">${d.address}</td>
-                <td class="p-3">${d.housing}</td>
-                <td class="p-3">${d.father}</td>
-                <td class="p-3">${d.mother}</td>
-                <td class="p-3">${d.familyStatus}</td>
-                <td class="p-3">${d.socialCategory}</td>
-                <td class="p-3">${d.orphanCategory}</td>
-                <td class="p-3 flex gap-2">
-                    <button onclick="editStudent(this)" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
-                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
-                </td>`;
-        }
-
-        function saveEditedStudent() {
-            const d = getFormData();
-            editingRow.innerHTML = buildStudentRowHtml(d, editingRow.rowIndex);
-            closeAddStudentModal();
-            alert("Talaba ma'lumoti muvaffaqiyatli yangilandi!");
-        }
-
-        function saveNewStudent() {
-            const d = getFormData();
             const tbody = document.getElementById('studentsTableBody');
-            const rowNum = tbody.rows.length + 1;
+            const rowCount = tbody.rows.length + 1;
+
             const newRow = document.createElement('tr');
-            newRow.className = 'hover:bg-gray-50';
-            newRow.innerHTML = buildStudentRowHtml(d, rowNum);
+            newRow.className = "hover:bg-gray-50";
+            newRow.innerHTML = `
+                <td class="p-3">${rowCount}</td>
+                <td class="p-3"><img src="${photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                <td class="p-3 font-medium">${fullName}</td>
+                <td class="p-3">${birthDate}</td>
+                <td class="p-3">${gender}</td>
+                <td class="p-3">${group}</td>
+                <td class="p-3">${phone}</td>
+                <td class="p-3">${birthPlace}</td>
+                <td class="p-3">${address}</td>
+                <td class="p-3">${housing}</td>
+                <td class="p-3">${father}</td>
+                <td class="p-3">${mother}</td>
+                <td class="p-3">${familyStatus}</td>
+                <td class="p-3">${socialCategory}</td>
+                <td class="p-3">${orphanCategory}</td>
+                <td class="p-3 flex gap-2">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
+                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                </td>
+            `;
             tbody.appendChild(newRow);
-            document.getElementById('studentCountBadge').textContent = `${rowNum} ta`;
+            document.getElementById('studentCountBadge').textContent = `${rowCount} ta`;
             closeAddStudentModal();
             alert("Yangi talaba ma'lumoti va rasmi muvaffaqiyatli qo'shildi!");
         }
 
         function deleteStudent(button) {
             if (confirm("Haqiqatan ham bu talabani o'chirmoqchimisiz?")) {
-                const row = button.closest('tr');
-                row.remove();
-                document.getElementById('studentCountBadge').textContent =
-                    document.querySelectorAll('#studentsTableBody tr').length + ' ta';
+                button.closest('tr').remove();
             }
         }
 
