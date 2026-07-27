@@ -658,30 +658,54 @@
             const tbody = document.getElementById('studentsTableBody');
             tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">Yuklanmoqda...</td></tr>';
 
-            // export?format=csv — CORS muammosi yo'q, Access-Control-Allow-Origin: *
-            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
+            const sheetUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(sheetUrl)}`;
 
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
+            let attempt = 0;
 
-            fetch(url, { signal: controller.signal })
-                .then(r => {
-                    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
-                    return r.text();
+            function tryFetch(url, label) {
+                attempt++;
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 20000);
+
+                return fetch(url, { signal: controller.signal, mode: 'cors' })
+                    .then(r => {
+                        clearTimeout(timeout);
+                        if (!r.ok) throw new Error(label + ' HTTP ' + r.status);
+                        return r.text();
+                    })
+                    .then(csv => {
+                        if (!csv || csv.trim() === '') throw new Error(label + ' bo\'sh javob');
+                        const rows = parseCSV(csv);
+                        if (rows.length < 2) throw new Error(label + ' ma\'lumot yo\'q');
+                        return rows.slice(1);
+                    })
+                    .catch(err => {
+                        clearTimeout(timeout);
+                        throw err;
+                    });
+            }
+
+            tryFetch(sheetUrl, 'Google')
+                .catch(err => {
+                    console.warn('To\'g\'ridan-to\'g\'ri ulanish xatosi:', err.message);
+                    // Ikkinchi urinish: CORS proxy orqali
+                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">Proxy orqali yuklanmoqda...</td></tr>';
+                    return tryFetch(proxyUrl, 'Proxy');
                 })
-                .then(csv => {
-                    clearTimeout(timeout);
-                    if (!csv || csv.trim() === '') throw new Error('Bo\'sh javob keldi');
-                    const rows = parseCSV(csv);
-                    if (rows.length < 2) throw new Error('Ma\'lumot topilmadi (sarlavha bor, qatorlar yo\'q)');
-                    const dataRows = rows.slice(1);
-                    console.log('Google Sheets ma\'lumoti:', dataRows.length + ' qator');
-                    renderStudents(dataRows);
+                .then(dataRows => {
+                    if (dataRows) {
+                        console.log('Yuklandi:', dataRows.length, 'qator');
+                        renderStudents(dataRows);
+                    }
                 })
                 .catch(err => {
-                    clearTimeout(timeout);
-                    console.error('Google Sheets xatosi:', err);
-                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">Xatolik: ' + err.message + '<br><br>Sheet → Share → "Anyone with the link" → Viewer qiling.</td></tr>';
+                    console.error('Yuklash xatosi:', err);
+                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">' +
+                        '<b>Google Sheets dan yuklab bo\'lmadi</b><br><br>' +
+                        'Sabab: ' + err.message + '<br><br>' +
+                        'Tuzatish: Sheet → Share → "Anyone with the link" → Viewer<br><br>' +
+                        '<small>F12 → Console dan batafsil xatolikni ko\'ring</small></td></tr>';
                 });
         }
 
