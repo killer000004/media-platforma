@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talabalar Ma'lumoti - Prototip</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (Excelga yuklash uchun kutubxona) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- LOGIN SAHIFASI -->
+    <div id="loginPage" class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-indigo-700">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-md">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Tizimga Kirish</h2>
+                <p class="text-sm text-gray-500">Tizimga kirish uchun ma'lumotlarni kiriting</p>
+            </div>
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Loginni kiriting">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Parol</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Parolni kiriting">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md">
+                    Kirish
+                </button>
+                <p id="loginError" class="text-red-500 text-sm text-center hidden">Login yoki parol noto'g'ri!</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ASOSIY PANEL (SUPER ADMIN) -->
+    <div id="dashboardPage" class="hidden min-h-screen flex flex-col">
+        
+        <!-- Yuqori Menyu (Navbar) -->
+        <header class="bg-white shadow px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xl font-bold text-blue-600 cursor-pointer" onclick="showSection('students')">Talabalar ma'lumoti</h1>
+            </div>
+
+            <!-- Tugmalar guruhi -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="bg-purple-700 text-white text-xs px-3 py-1.5 rounded font-medium">admin (superadmin)</span>
+                <button onclick="showSection('users')" class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5 rounded transition">Foydalanuvchilar</button>
+                <button onclick="showSection('groups')" class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5 rounded transition">Guruhlar</button>
+                <button onclick="alert('O\'chirilganlar sahifasi')" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1.5 rounded transition">O'chirilganlar</button>
+                <button onclick="showSection('statistics')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-3 py-1.5 rounded transition">Statistika</button>
+                <button onclick="exportToExcel()" class="bg-green-700 hover:bg-green-800 text-white text-sm px-3 py-1.5 rounded transition flex items-center gap-1.5 font-medium shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i> Excel yuklash
+                </button>
+                <button onclick="alert('Excel import oynasi')" class="bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-1.5 rounded transition">Excel import</button>
+                <button onclick="openAddStudentModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded transition font-semibold">+ Yangi talaba</button>
+                <button onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition">Chiqish</button>
+            </div>
+        </header>
+
+        <!-- 1. TALABALAR SAHIFASI (ASOSIY PANEL) -->
+        <main id="studentsSection" class="flex-1 p-4 max-w-full overflow-x-auto">
+            <div class="bg-white p-4 rounded-lg shadow mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="w-full md:w-1/3 relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                        <i class="fa-solid fa-search"></i>
+                    </span>
+                    <input type="text" placeholder="Qidirish... (Ism, telefon, manzil va h.k.)" class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex flex-wrap gap-4 text-sm text-gray-600 font-medium">
+                    <span>Oila: <strong class="text-black">0 ta</strong></span>
+                    <span>Oilaasiz: <strong class="text-black">333 ta</strong></span>
+                    <span>O'z uyi: <strong class="text-black">0 ta</strong></span>
+                    <span>Ijara: <strong class="text-black">0 ta</strong></span>
+                    <span>Qarindoshniki: <strong class="text-black">0 ta</strong></span>
+                    <span>Yotoqxona: <strong class="text-black">0 ta</strong></span>
+                </div>
+                <div id="studentCountBadge" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm font-semibold">
+                    1 ta
+                </div>
+            </div>
+
+            <!-- Jadval qismi -->
+            <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-gray-600">
+                            <th class="p-3 border-r">#</th>
+                            <th class="p-3 border-r">Rasm</th>
+                            <th class="p-3 border-r">Ism familiya o'chestva</th>
+                            <th class="p-3 border-r">Tug'ilgan sana</th>
+                            <th class="p-3 border-r">Jinsi</th>
+                            <th class="p-3 border-r">Yo'nalish / Guruh</th>
+                            <th class="p-3 border-r">Telefon</th>
+                            <th class="p-3 border-r">Tug'ilgan joyi</th>
+                            <th class="p-3 border-r">Yashash manzili</th>
+                            <th class="p-3 border-r">Uy-joy</th>
+                            <th class="p-3 border-r">Otasi</th>
+                            <th class="p-3 border-r">Onasi</th>
+                            <th class="p-3 border-r">Oilaviy holati</th>
+                            <th class="p-3 border-r">Ijtimoiy toifa</th>
+                            <th class="p-3 border-r">Yetimlik toifasi</th>
+                            <th class="p-3">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody" class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">1</td>
+                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                            <td class="p-3 font-medium">Ahmadov Ahadbek Shermatboy o'g'li</td>
+                            <td class="p-3">2005-12-07</td>
+                            <td class="p-3">Erkak</td>
+                            <td class="p-3">Iqtisodiyot / ECO 24-02</td>
+                            <td class="p-3">941798696</td>
+                            <td class="p-3">Xorazm viloyati Xonqa tumani...</td>
+                            <td class="p-3">Toshkent shahar Chilonzor tumani...</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3">Xasanov Shermatboy...</td>
+                            <td class="p-3">Karimova Sharofat...</td>
+                            <td class="p-3">Oilaasiz</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3">-</td>
+                            <td class="p-3 flex gap-2">
+                                <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
+                                <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- 2. FOYDALANUVCHILAR (USERS) PANEL SAHIFASI -->
+        <main id="usersSection" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
+            <div class="mb-4">
+                <button onclick="showSection('students')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition flex items-center gap-2 w-fit">
+                    <i class="fa-solid fa-arrow-left"></i> Asosiy panelga qaytish
+                </button>
+            </div>
+
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Foydalanuvchilar boshqaruvi</h2>
+                    <p class="text-sm text-gray-500">Tizim foydalanuvchilarini yaratish va ularga guruh biriktirish</p>
+                </div>
+                <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                    <i class="fa-solid fa-user-plus mr-2"></i> Yangi foydalanuvchi yaratish
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-gray-600">
+                            <th class="p-3">#</th>
+                            <th class="p-3">F.I.Sh / Login</th>
+                            <th class="p-3">Rol</th>
+                            <th class="p-3">Biriktirilgan guruh</th>
+                            <th class="p-3 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50" data-login="jasur_user" data-pass="12345">
+                            <td class="p-3">1</td>
+                            <td class="p-3 font-medium">Jasur Bekmurodov <br><span class="text-xs text-gray-400">jasur_user</span></td>
+                            <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">User</span></td>
+                            <td class="p-3">
+                                <select class="user-group-select border rounded px-2 py-1 text-sm bg-gray-50">
+                                    <option value="">Guruhni tanlang</option>
+                                    <option value="Iqtisodiyot / ECO 24-02" selected>Iqtisodiyot / ECO 24-02</option>
+                                    <option value="Fizika / FIZ 24-01">Fizika / FIZ 24-01</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteUser(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- 3. GURUHLAR BOSHQARUVI SAHIFASI -->
+        <main id="groupsSection" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
+            <div class="mb-4">
+                <button onclick="showSection('students')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition flex items-center gap-2 w-fit">
+                    <i class="fa-solid fa-arrow-left"></i> Asosiy panelga qaytish
+                </button>
+            </div>
+
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Guruhlar boshqaruvi</h2>
+                    <p class="text-sm text-gray-500">Yangi guruhlar yaratish va ularni kursdan kursga ko'chirish</p>
+                </div>
+                <button onclick="openAddGroupModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                    <i class="fa-solid fa-users-rectangle mr-2"></i> Yangi guruh yaratish
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-gray-600">
+                            <th class="p-3">#</th>
+                            <th class="p-3">Guruh nomi</th>
+                            <th class="p-3">Yo'nalishi</th>
+                            <th class="p-3">Joriy kursi</th>
+                            <th class="p-3">Kursdan kursga o'tkazish</th>
+                            <th class="p-3 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groupsTableBody" class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">1</td>
+                            <td class="p-3 font-semibold text-blue-600">ECO 24-02</td>
+                            <td class="p-3">Iqtisodiyot</td>
+                            <td class="p-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold">2-kurs</span></td>
+                            <td class="p-3">
+                                <select onchange="upgradeCourse(this)" class="border rounded px-2 py-1 text-sm bg-gray-50 font-medium">
+                                    <option value="1">1-kursga</option>
+                                    <option value="2" selected>2-kursga</option>
+                                    <option value="3">3-kursga</option>
+                                    <option value="4">4-kursga</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteGroup(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">2</td>
+                            <td class="p-3 font-semibold text-blue-600">FIZ 24-01</td>
+                            <td class="p-3">Fizika</td>
+                            <td class="p-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold">1-kurs</span></td>
+                            <td class="p-3">
+                                <select onchange="upgradeCourse(this)" class="border rounded px-2 py-1 text-sm bg-gray-50 font-medium">
+                                    <option value="1" selected>1-kursga</option>
+                                    <option value="2">2-kursga</option>
+                                    <option value="3">3-kursga</option>
+                                    <option value="4">4-kursga</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteGroup(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- 4. STATISTIKA SAHIFASI -->
+        <main id="statisticsSection" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
+            <div class="mb-4">
+                <button onclick="showSection('students')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition flex items-center gap-2 w-fit">
+                    <i class="fa-solid fa-arrow-left"></i> Asosiy panelga qaytish
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Talabalar statistikasi</h2>
+                <p class="text-sm text-gray-500">Guruhlar kesimida talabalar sonining raqamli ko'rsatkichlari</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-500 font-medium">Jami talabalar soni</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1">687 ta</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
+                    <p class="text-sm text-gray-500 font-medium">Faol guruhlar soni</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1">15 ta</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-l-4 border-purple-500">
+                    <p class="text-sm text-gray-500 font-medium">Oilaasiz talabalar</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1">333 ta</h3>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b font-bold text-gray-700">Guruhlar bo'yicha talabalar soni</div>
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b text-gray-600 bg-gray-50/50">
+                            <th class="p-3">#</th>
+                            <th class="p-3">Guruh nomi</th>
+                            <th class="p-3">Yo'nalish</th>
+                            <th class="p-3">Talabalar soni (ta)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">1</td>
+                            <td class="p-3 font-semibold">ECO 24-02</td>
+                            <td class="p-3">Iqtisodiyot</td>
+                            <td class="p-3"><span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">28 ta</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">2</td>
+                            <td class="p-3 font-semibold">ECO 24-03</td>
+                            <td class="p-3">Iqtisodiyot</td>
+                            <td class="p-3"><span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">25 ta</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">3</td>
+                            <td class="p-3 font-semibold">FIZ 24-01</td>
+                            <td class="p-3">Fizika</td>
+                            <td class="p-3"><span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">30 ta</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- ODDIY FOYDALANUVCHI (USER) PANEL SAHIFASI -->
+    <div id="userDashboardPage" class="hidden min-h-screen flex flex-col">
+        <header class="bg-white shadow px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xl font-bold text-blue-600">Talabalar ma'lumoti (<span id="userGroupNameDisplay" class="text-purple-600">Guruh</span>)</h1>
+            </div>
+            <div>
+                <span id="userNameDisplay" class="bg-blue-100 text-blue-700 text-xs px-3 py-1.5 rounded font-medium mr-3">User</span>
+                <button onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition">Chiqish</button>
+            </div>
+        </header>
+        <main class="flex-1 p-4 max-w-full overflow-x-auto">
+            <div class="bg-white p-4 rounded-lg shadow mb-4">
+                <p class="text-gray-700 font-medium">Sizga biriktirilgan guruh talabalari ro'yxati.</p>
+            </div>
+            <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-gray-600">
+                            <th class="p-3 border-r">#</th>
+                            <th class="p-3 border-r">Rasm</th>
+                            <th class="p-3 border-r">Ism familiya o'chestva</th>
+                            <th class="p-3 border-r">Tug'ilgan sana</th>
+                            <th class="p-3 border-r">Jinsi</th>
+                            <th class="p-3 border-r">Yo'nalish / Guruh</th>
+                            <th class="p-3 border-r">Telefon</th>
+                            <th class="p-3 border-r">Yashash manzili</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3">1</td>
+                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                            <td class="p-3 font-medium">Ahmadov Ahadbek Shermatboy o'g'li</td>
+                            <td class="p-3">2005-12-07</td>
+                            <td class="p-3">Erkak</td>
+                            <td class="p-3">Iqtisodiyot / ECO 24-02</td>
+                            <td class="p-3">941798696</td>
+                            <td class="p-3">Toshkent shahar Chilonzor tumani...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- YANGI TALABA QO'SHISH MODAL OYNASI -->
+    <div id="addStudentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Yangi talaba ma'lumotini qo'shish</h3>
+            <form id="addStudentForm" onsubmit="saveNewStudent(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rasm yuklash</label>
+                    <input type="file" id="stPhoto" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ism familiya o'chestva</label>
+                    <input type="text" id="stFullName" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Aliyev Vali G'anijon o'g'li">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tug'ilgan sana</label>
+                    <input type="date" id="stBirthDate" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jinsi</label>
+                    <select id="stGender" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Erkak">Erkak</option>
+                        <option value="Ayol">Ayol</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Yo'nalish / Guruh</label>
+                    <select id="stGroup" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                        <option value="">Guruhni tanlang</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefon raqam</label>
+                    <input type="text" id="stPhone" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: 991234567">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tug'ilgan joyi</label>
+                    <input type="text" id="stBirthPlace" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Viloyat, tuman...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Yashash manzili</label>
+                    <input type="text" id="stAddress" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Doimiy yashash manzili...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Uy-joy holati</label>
+                    <select id="stHousing" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="-">-</option>
+                        <option value="O'z uyi">O'z uyi</option>
+                        <option value="Ijara">Ijara</option>
+                        <option value="Qarindoshniki">Qarindoshniki</option>
+                        <option value="Yotoqxona">Yotoqxona</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Otasi (F.I.Sh)</label>
+                    <input type="text" id="stFather" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Otasining F.I.Sh">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Onasi (F.I.Sh)</label>
+                    <input type="text" id="stMother" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Onasining F.I.Sh">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Oilaviy holati</label>
+                    <select id="stFamilyStatus" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Oilaasiz">Oilaasiz</option>
+                        <option value="Oila">Oila</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ijtimoiy toifa</label>
+                    <input type="text" id="stSocialCategory" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Temir daftar...">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Yetimlik toifasi</label>
+                    <input type="text" id="stOrphanCategory" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Chin yetim / Yo'q">
+                </div>
+                <div class="md:col-span-2 flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeAddStudentModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg text-sm">Bekor qilish</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Saqlash</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- YANGI FOYDALANUVCHI QO'SHISH MODAL OYNASI -->
+    <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Yangi foydalanuvchi qo'shish</h3>
+            <form id="addUserForm" onsubmit="saveNewUser(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">F.I.Sh (Ism familiyasi)</label>
+                    <input type="text" id="newUserName" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Alisher Vahobov">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                    <input type="text" id="newUserLogin" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Loginni kiriting">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Parol</label>
+                    <input type="password" id="newUserPass" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Parolni kiriting">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Biriktiriladigan guruh</label>
+                    <select id="newUserGroup" class="user-group-select w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="">Guruhni tanlang</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeAddUserModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg text-sm">Bekor qilish</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Saqlash</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- YANGI GURUH QO'SHISH MODAL OYNASI -->
+    <div id="addGroupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Yangi guruh yaratish</h3>
+            <form id="addGroupForm" onsubmit="saveNewGroup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Guruh nomi</label>
+                    <input type="text" id="newGroupName" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: MAT 24-01">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Yo'nalishi</label>
+                    <input type="text" id="newGroupDirection" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Matematika">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kursi</label>
+                    <select id="newGroupCourse" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="1-kurs">1-kurs</option>
+                        <option value="2-kurs">2-kurs</option>
+                        <option value="3-kurs">3-kurs</option>
+                        <option value="4-kurs">4-kurs</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeAddGroupModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg text-sm">Bekor qilish</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Saqlash</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript skriptlari -->
+    <script>
+        // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
+        function exportToExcel() {
+            const table = document.querySelector('#studentsSection table');
+            if (!table) return;
+
+            const rowsData = [];
+            const headers = [];
+
+            // 1. Sarlavhalar (Rasm ustuni ham qo'shiladi, oxirgi Amallar tashlanadi)
+            const ths = table.querySelectorAll('thead th');
+            ths.forEach((th, index) => {
+                if (index !== ths.length - 1) {
+                    headers.push(th.innerText.trim());
+                }
+            });
+            rowsData.push(headers);
+
+            // 2. Qatorlar ma'lumotlari
+            const trs = table.querySelectorAll('tbody tr');
+            trs.forEach(tr => {
+                const rowData = [];
+                const tds = tr.querySelectorAll('td');
+                tds.forEach((td, index) => {
+                    if (index !== tds.length - 1) {
+                        // Agar bu rasm ustuni (1-indeks) bo'lsa, uning src manzilini olamiz
+                        if (index === 1) {
+                            const img = td.querySelector('img');
+                            rowData.push(img ? img.src : '');
+                        } else {
+                            rowData.push(td.innerText.trim());
+                        }
+                    }
+                });
+                rowsData.push(rowData);
+            });
+
+            // 3. SheetJS yordamida Excel fayl yaratish
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rowsData);
+
+            ws['!cols'] = [
+                { wch: 5 },  // #
+                { wch: 30 }, // Rasm havolasi
+                { wch: 35 }, // Ism familiya o'chestva
+                { wch: 15 }, // Tug'ilgan sana
+                { wch: 10 }, // Jinsi
+                { wch: 25 }, // Yo'nalish / Guruh
+                { wch: 15 }, // Telefon
+                { wch: 30 }, // Tug'ilgan joyi
+                { wch: 30 }, // Yashash manzili
+                { wch: 15 }, // Uy-joy
+                { wch: 25 }, // Otasi
+                { wch: 25 }, // Onasi
+                { wch: 15 }, // Oilaviy holati
+                { wch: 15 }, // Ijtimoiy toifa
+                { wch: 15 }  // Yetimlik toifasi
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, "Talabalar");
+            XLSX.writeFile(wb, "Talabalar_malumoti.xlsx");
+        }
+
+        function updateGroupSelects() {
+            const groupRows = document.querySelectorAll('#groupsTableBody tr');
+            let optionsHtml = '<option value="">Guruhni tanlang</option>';
+
+            groupRows.forEach(row => {
+                const dir = row.cells[2].textContent.trim();
+                const gName = row.cells[1].textContent.trim();
+                const combined = `${dir} / ${gName}`;
+                optionsHtml += `<option value="${combined}">${combined}</option>`;
+            });
+
+            document.querySelectorAll('#stGroup, .user-group-select').forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = optionsHtml;
+                select.value = currentVal;
+            });
+        }
+
+        window.onload = function() {
+            updateGroupSelects();
+        };
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const errorText = document.getElementById('loginError');
+
+            if (user === 'AZIZ' && pass === 'AZIZ') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.remove('hidden');
+                showSection('students');
+                return;
+            }
+
+            let foundUser = false;
+            const rows = document.querySelectorAll('#usersTableBody tr');
+            rows.forEach(row => {
+                const loginSpan = row.querySelector('span.text-xs');
+                const rowLogin = row.getAttribute('data-login') || (loginSpan ? loginSpan.textContent.trim() : '');
+                const rowPass = row.getAttribute('data-pass') || '12345';
+                const rowName = row.querySelector('td:nth-child(2)').childNodes[0].nodeValue.trim();
+                const groupSelect = row.querySelector('select');
+                const assignedGroup = groupSelect ? groupSelect.value : 'Biriktirilmagan';
+
+                if (user === rowLogin && pass === rowPass) {
+                    foundUser = true;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('userDashboardPage').classList.remove('hidden');
+                    document.getElementById('userNameDisplay').textContent = rowName;
+                    document.getElementById('userGroupNameDisplay').textContent = assignedGroup;
+                }
+            });
+
+            if (!foundUser) {
+                errorText.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            document.getElementById('dashboardPage').classList.add('hidden');
+            document.getElementById('userDashboardPage').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').classList.add('hidden');
+            showSection('students');
+        }
+
+        function showSection(section) {
+            const studentsSec = document.getElementById('studentsSection');
+            const usersSec = document.getElementById('usersSection');
+            const groupsSec = document.getElementById('groupsSection');
+            const statsSec = document.getElementById('statisticsSection');
+
+            studentsSec.classList.add('hidden');
+            usersSec.classList.add('hidden');
+            groupsSec.classList.add('hidden');
+            statsSec.classList.add('hidden');
+
+            if (section === 'students') studentsSec.classList.remove('hidden');
+            if (section === 'users') usersSec.classList.remove('hidden');
+            if (section === 'groups') groupsSec.classList.remove('hidden');
+            if (section === 'statistics') statsSec.classList.remove('hidden');
+        }
+
+        function openAddStudentModal() { 
+            updateGroupSelects();
+            document.getElementById('addStudentModal').classList.remove('hidden'); 
+        }
+        function closeAddStudentModal() { document.getElementById('addStudentModal').classList.add('hidden'); document.getElementById('addStudentForm').reset(); }
+
+        function saveNewStudent(event) {
+            event.preventDefault();
+            
+            const photoInput = document.getElementById('stPhoto');
+            let photoSrc = "https://via.placeholder.com/40"; // Agar rasm tanlanmasa standart holat
+
+            if (photoInput.files && photoInput.files[0]) {
+                photoSrc = URL.createObjectURL(photoInput.files[0]);
+            }
+
+            const fullName = document.getElementById('stFullName').value;
+            const birthDate = document.getElementById('stBirthDate').value;
+            const gender = document.getElementById('stGender').value;
+            const group = document.getElementById('stGroup').value;
+            const phone = document.getElementById('stPhone').value;
+            const birthPlace = document.getElementById('stBirthPlace').value;
+            const address = document.getElementById('stAddress').value;
+            const housing = document.getElementById('stHousing').value;
+            const father = document.getElementById('stFather').value || '-';
+            const mother = document.getElementById('stMother').value || '-';
+            const familyStatus = document.getElementById('stFamilyStatus').value;
+            const socialCategory = document.getElementById('stSocialCategory').value || '-';
+            const orphanCategory = document.getElementById('stOrphanCategory').value || '-';
+
+            const tbody = document.getElementById('studentsTableBody');
+            const rowCount = tbody.rows.length + 1;
+
+            const newRow = document.createElement('tr');
+            newRow.className = "hover:bg-gray-50";
+            newRow.innerHTML = `
+                <td class="p-3">${rowCount}</td>
+                <td class="p-3"><img src="${photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                <td class="p-3 font-medium">${fullName}</td>
+                <td class="p-3">${birthDate}</td>
+                <td class="p-3">${gender}</td>
+                <td class="p-3">${group}</td>
+                <td class="p-3">${phone}</td>
+                <td class="p-3">${birthPlace}</td>
+                <td class="p-3">${address}</td>
+                <td class="p-3">${housing}</td>
+                <td class="p-3">${father}</td>
+                <td class="p-3">${mother}</td>
+                <td class="p-3">${familyStatus}</td>
+                <td class="p-3">${socialCategory}</td>
+                <td class="p-3">${orphanCategory}</td>
+                <td class="p-3 flex gap-2">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
+                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            document.getElementById('studentCountBadge').textContent = `${rowCount} ta`;
+            closeAddStudentModal();
+            alert("Yangi talaba ma'lumoti va rasmi muvaffaqiyatli qo'shildi!");
+        }
+
+        function deleteStudent(button) {
+            if (confirm("Haqiqatan ham bu talabani o'chirmoqchimisiz?")) {
+                button.closest('tr').remove();
+            }
+        }
+
+        function openAddUserModal() { 
+            updateGroupSelects();
+            document.getElementById('addUserModal').classList.remove('hidden'); 
+        }
+        function closeAddUserModal() { document.getElementById('addUserModal').classList.add('hidden'); document.getElementById('addUserForm').reset(); }
+
+        function saveNewUser(event) {
+            event.preventDefault();
+            const name = document.getElementById('newUserName').value;
+            const login = document.getElementById('newUserLogin').value;
+            const pass = document.getElementById('newUserPass').value;
+            const group = document.getElementById('newUserGroup').value || "Biriktirilmagan";
+
+            const tbody = document.getElementById('usersTableBody');
+            const rowCount = tbody.rows.length + 1;
+
+            const newRow = document.createElement('tr');
+            newRow.className = "hover:bg-gray-50";
+            newRow.setAttribute('data-login', login);
+            newRow.setAttribute('data-pass', pass);
+            
+            const groupRows = document.querySelectorAll('#groupsTableBody tr');
+            let optionsHtml = '<option value="">Guruhni tanlang</option>';
+            groupRows.forEach(row => {
+                const dir = row.cells[2].textContent.trim();
+                const gName = row.cells[1].textContent.trim();
+                const combined = `${dir} / ${gName}`;
+                optionsHtml += `<option value="${combined}" ${group === combined ? 'selected' : ''}>${combined}</option>`;
+            });
+
+            newRow.innerHTML = `
+                <td class="p-3">${rowCount}</td>
+                <td class="p-3 font-medium">${name} <br><span class="text-xs text-gray-400">${login}</span></td>
+                <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">User</span></td>
+                <td class="p-3">
+                    <select class="user-group-select border rounded px-2 py-1 text-sm bg-gray-50">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td class="p-3 text-center">
+                    <button onclick="deleteUser(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            closeAddUserModal();
+            alert("Yangi foydalanuvchi muvaffaqiyatli qo'shildi!");
+        }
+
+        function deleteUser(button) {
+            if (confirm("Haqiqatan ham bu foydalanuvchini o'chirmoqchimisiz?")) {
+                button.closest('tr').remove();
+            }
+        }
+
+        function openAddGroupModal() { document.getElementById('addGroupModal').classList.remove('hidden'); }
+        function closeAddGroupModal() { document.getElementById('addGroupModal').classList.add('hidden'); document.getElementById('addGroupForm').reset(); }
+
+        function saveNewGroup(event) {
+            event.preventDefault();
+            const gName = document.getElementById('newGroupName').value;
+            const gDir = document.getElementById('newGroupDirection').value;
+            const gCourse = document.getElementById('newGroupCourse').value;
+
+            const tbody = document.getElementById('groupsTableBody');
+            const rowCount = tbody.rows.length + 1;
+
+            const newRow = document.createElement('tr');
+            newRow.className = "hover:bg-gray-50";
+            newRow.innerHTML = `
+                <td class="p-3">${rowCount}</td>
+                <td class="p-3 font-semibold text-blue-600">${gName}</td>
+                <td class="p-3">${gDir}</td>
+                <td class="p-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold">${gCourse}</span></td>
+                <td class="p-3">
+                    <select onchange="upgradeCourse(this)" class="border rounded px-2 py-1 text-sm bg-gray-50 font-medium">
+                        <option value="1" ${gCourse.includes('1') ? 'selected' : ''}>1-kursga</option>
+                        <option value="2" ${gCourse.includes('2') ? 'selected' : ''}>2-kursga</option>
+                        <option value="3" ${gCourse.includes('3') ? 'selected' : ''}>3-kursga</option>
+                        <option value="4" ${gCourse.includes('4') ? 'selected' : ''}>4-kursga</option>
+                    </select>
+                </td>
+                <td class="p-3 text-center">
+                    <button onclick="deleteGroup(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            updateGroupSelects();
+            closeAddGroupModal();
+            alert("Yangi guruh muvaffaqiyatli qo'shildi!");
+        }
+
+        function deleteGroup(button) {
+            if (confirm("Haqiqatan ham bu guruhni o'chirmoqchimisiz?")) {
+                button.closest('tr').remove();
+                updateGroupSelects();
+            }
+        }
+
+        function upgradeCourse(selectElement) {
+            const courseVal = selectElement.value;
+            const badge = selectElement.closest('tr').querySelector('span');
+            badge.textContent = `${courseVal}-kurs`;
+            alert(`Guruh kursi muvaffaqiyatli ${courseVal}-kursga o'tkazildi!`);
+        }
+    </script>
+</body>
+</html>
