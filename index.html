@@ -658,55 +658,95 @@
             const tbody = document.getElementById('studentsTableBody');
             tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">Yuklanmoqda...</td></tr>';
 
-            const sheetUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(sheetUrl)}`;
+            // Urinish 1: fetch orqali export?format=csv (CORS * bo'lgani uchun ishlashi kerak)
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
 
-            let attempt = 0;
-
-            function tryFetch(url, label) {
-                attempt++;
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 20000);
-
-                return fetch(url, { signal: controller.signal, mode: 'cors' })
-                    .then(r => {
-                        clearTimeout(timeout);
-                        if (!r.ok) throw new Error(label + ' HTTP ' + r.status);
-                        return r.text();
-                    })
-                    .then(csv => {
-                        if (!csv || csv.trim() === '') throw new Error(label + ' bo\'sh javob');
-                        const rows = parseCSV(csv);
-                        if (rows.length < 2) throw new Error(label + ' ma\'lumot yo\'q');
-                        return rows.slice(1);
-                    })
-                    .catch(err => {
-                        clearTimeout(timeout);
-                        throw err;
-                    });
+            function parseAndRender(csv) {
+                const rows = parseCSV(csv);
+                if (rows.length < 2) throw new Error('Ma\'lumot yo\'q');
+                const dataRows = rows.slice(1);
+                console.log('Yuklandi:', dataRows.length, 'qator');
+                renderStudents(dataRows);
+                return true;
             }
 
-            tryFetch(sheetUrl, 'Google')
-                .catch(err => {
-                    console.warn('To\'g\'ridan-to\'g\'ri ulanish xatosi:', err.message);
-                    // Ikkinchi urinish: CORS proxy orqali
-                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">Proxy orqali yuklanmoqda...</td></tr>';
-                    return tryFetch(proxyUrl, 'Proxy');
+            function showError(msg) {
+                tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">' +
+                    '<b>Google Sheets dan yuklab bo\'lmadi</b><br><br>' +
+                    'Xatolik: ' + msg + '<br><br>' +
+                    'Tuzatish: Sheet → Share → "Anyone with the link" → Viewer</td></tr>';
+            }
+
+            // Try fetch first
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+
+            fetch(csvUrl, { signal: controller.signal })
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
                 })
-                .then(dataRows => {
-                    if (dataRows) {
-                        console.log('Yuklandi:', dataRows.length, 'qator');
-                        renderStudents(dataRows);
-                    }
+                .then(csv => {
+                    clearTimeout(timer);
+                    if (!csv || csv.trim() === '') throw new Error('Bo\'sh javob');
+                    parseAndRender(csv);
                 })
                 .catch(err => {
-                    console.error('Yuklash xatosi:', err);
-                    tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-red-500 text-lg">' +
-                        '<b>Google Sheets dan yuklab bo\'lmadi</b><br><br>' +
-                        'Sabab: ' + err.message + '<br><br>' +
-                        'Tuzatish: Sheet → Share → "Anyone with the link" → Viewer<br><br>' +
-                        '<small>F12 → Console dan batafsil xatolikni ko\'ring</small></td></tr>';
+                    clearTimeout(timer);
+                    console.warn('Fetch xatosi, JSONP ga o\'tish:', err.message);
+                    // Urinish 2: JSONP orqali gviz/tq (CORS muammosiz)
+                    tryJSONP();
                 });
+
+            function tryJSONP() {
+                tbody.innerHTML = '<tr><td colspan="16" class="p-6 text-center text-gray-400 text-lg">2- usul bilan yuklanmoqda...</td></tr>';
+
+                const cb = 'gvizCb_' + Math.random().toString(36).substr(2, 9);
+                const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cb}&gid=${GOOGLE_SHEET_GID}`;
+
+                let done = false;
+
+                window[cb] = function(response) {
+                    done = true;
+                    delete window[cb];
+                    const el = document.getElementById('gvizScr');
+                    if (el) el.remove();
+                    try {
+                        if (response.status !== 'ok') {
+                            throw new Error(response.errors?.[0]?.message || 'Noma\'lum xato');
+                        }
+                        const rows = response.table.rows.map(row =>
+                            row.c.map(cell => cell?.v ?? cell?.f ?? '')
+                        );
+                        console.log('Yuklandi (JSONP):', rows.length, 'qator');
+                        renderStudents(rows);
+                    } catch (e) {
+                        showError(e.message);
+                    }
+                };
+
+                const script = document.createElement('script');
+                script.id = 'gvizScr';
+                script.src = url;
+                script.onerror = function() {
+                    if (!done) {
+                        delete window[cb];
+                        script.remove();
+                        showError('Google Sheets ga ulanish xatosi. Sheet ni "Anyone with the link" qiling.');
+                    }
+                };
+                document.body.appendChild(script);
+
+                // 25 soniyadan so'ng timeout
+                setTimeout(function() {
+                    if (!done) {
+                        delete window[cb];
+                        const el = document.getElementById('gvizScr');
+                        if (el) el.remove();
+                        showError('Vaqt tugadi (timeout). Internet yoki Sheet sozlamalarini tekshiring.');
+                    }
+                }, 25000);
+            }
         }
 
         function updateGroupSelects() {
