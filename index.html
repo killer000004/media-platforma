@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -839,42 +839,68 @@
 
     <!-- JavaScript skriptlari -->
      <script>
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbw_UK7uuiin96VNVRRoKitDp7EaTA56nXHGfwa0SnbkLk5G8pW6Okp1h20ssNztlTbJ-w/exec';
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwumgDWjK9S75udMmQutWrxRgxwDIc_30acWBsac2T2Y7NVf9CEmzMFx746CbvUFUpP/exec';
+
+        function saveCache(k, v) { try { localStorage.setItem('cache_' + k, JSON.stringify(v)); } catch(e) {} }
+        function loadCache(k) { try { return JSON.parse(localStorage.getItem('cache_' + k)); } catch(e) { return null; } }
 
         async function apiGet(action) {
+            const url = SHEET_API_URL + '?action=' + encodeURIComponent(action);
             try {
-                const res = await fetch(SHEET_API_URL + '?action=' + encodeURIComponent(action));
-                return await res.json();
-            } catch (e) {
-                return { rows: [] };
-            }
+                const res = await fetch(url, { redirect: 'follow' });
+                if (res.ok) return await res.json();
+            } catch (e) {}
+            try {
+                const res = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.onload = () => resolve(xhr);
+                    xhr.onerror = reject;
+                    xhr.send();
+                });
+                return JSON.parse(res.responseText);
+            } catch (e) {}
+            const cached = loadCache(action);
+            if (cached) return { rows: cached };
+            return { rows: [] };
         }
 
         async function apiPost(data) {
-            return new Promise((resolve) => {
-                const id = 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-                const iframe = document.createElement('iframe');
-                iframe.name = id; iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-                const form = document.createElement('form');
-                form.method = 'POST'; form.action = SHEET_API_URL; form.target = id;
-                form.style.display = 'none';
-                const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
-                form.appendChild(input);
-                document.body.appendChild(form);
-                let cleaned = false;
-                function clean() { if (!cleaned) { cleaned = true; clearTimeout(timer); if (document.body.contains(iframe)) document.body.removeChild(iframe); if (document.body.contains(form)) document.body.removeChild(form); resolve({ success: true }); } }
-                const timer = setTimeout(clean, 3000);
-                iframe.onload = clean;
-                form.submit();
-            });
+            const payload = JSON.stringify(data);
+            const id = 'frm_' + Date.now();
+            const iframe = document.createElement('iframe');
+            iframe.name = id; iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            const form = document.createElement('form');
+            form.method = 'POST'; form.action = SHEET_API_URL; form.target = id; form.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'hidden'; input.name = 'payload'; input.value = payload;
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+            setTimeout(() => {
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                if (document.body.contains(form)) document.body.removeChild(form);
+            }, 5000);
+            return { success: true };
         }
 
         async function callServer(fn, data) {
-            if (fn === 'getStudentsData') return apiGet('getStudents');
-            if (fn === 'getUsersData') return apiGet('getUsers');
-            if (fn === 'getGroupsData') return apiGet('getGroups');
+            if (fn === 'getStudentsData') {
+                const res = await apiGet('getStudents');
+                if (res && res.rows && res.rows.length > 0) saveCache('getStudents', res.rows);
+                return res;
+            }
+            if (fn === 'getUsersData') {
+                const res = await apiGet('getUsers');
+                if (res && res.rows && res.rows.length > 0) saveCache('getUsers', res.rows);
+                return res;
+            }
+            if (fn === 'getGroupsData') {
+                const res = await apiGet('getGroups');
+                if (res && res.rows && res.rows.length > 0) saveCache('getGroups', res.rows);
+                return res;
+            }
             const map = { addStudent:1, deleteStudent:1, addUser:1, deleteUser:1, updateUserGroups:1, updateUserPerms:1, addGroup:1, deleteGroup:1, updateGroupCourse:1 };
             if (map[fn]) return apiPost({ action: fn, data });
             return { error: 'Unknown: ' + fn };
@@ -1189,7 +1215,9 @@
         }
 
         window.onload = function() {
-            loadAllData();
+            if (!applySavedSession()) {
+                loadAllData();
+            }
         };
 
         async function loadAllData() {
@@ -1237,8 +1265,8 @@
 
                 // Foydalanuvchilar jadvalini to'ldirish
                 const usBody = document.getElementById('usersTableBody');
-                usBody.innerHTML = '';
-                if (usersRes.rows) {
+                if (usersRes.rows && usersRes.rows.length > 0) {
+                    usBody.innerHTML = '';
                     usersRes.rows.forEach((row, i) => {
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-gray-50';
@@ -1269,8 +1297,8 @@
 
                 // Guruhlar jadvalini to'ldirish
                 const grBody = document.getElementById('groupsTableBody');
-                grBody.innerHTML = '';
-                if (groupsRes.rows) {
+                if (groupsRes.rows && groupsRes.rows.length > 0) {
+                    grBody.innerHTML = '';
                     groupsRes.rows.forEach((row, i) => {
                         const gName = row[0] || '';
                         const gDir = row[1] || '';
@@ -1323,18 +1351,35 @@
             }
         }
 
+        function applySavedSession() {
+            const s = JSON.parse(localStorage.getItem('daxshat_session'));
+            if (!s) return false;
+            if (s.type === 'admin') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.remove('hidden');
+                showSection('students');
+                loadAllData();
+                return true;
+            }
+            if (s.type === 'user') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('userDashboardPage').classList.remove('hidden');
+                document.getElementById('userNameDisplay').textContent = s.name || '';
+                document.getElementById('userGroupNameDisplay').textContent = (s.groups || []).join(', ');
+                document.querySelectorAll('#userDashboardPage [data-perm]').forEach(el => {
+                    el.style.display = (s.perms || []).includes(el.getAttribute('data-perm')) ? '' : 'none';
+                });
+                loadAllData();
+                return true;
+            }
+            return false;
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             const errorText = document.getElementById('loginError');
-
-            if (user === 'AZIZ' && pass === 'AZIZ') {
-                document.getElementById('loginPage').classList.add('hidden');
-                document.getElementById('dashboardPage').classList.remove('hidden');
-                showSection('students');
-                return;
-            }
 
             try {
                 const res = await callServer('getUsersData');
@@ -1346,6 +1391,8 @@
                             const groupsData = match[3] || '';
                             const assignedGroups = groupsData ? groupsData.split(',').filter(Boolean) : ['Biriktirilmagan'];
                             const perms = (match[4] || 'students_view,student_add,student_edit,student_delete,excel_export,statistics_view').split(',');
+
+                            localStorage.setItem('daxshat_session', JSON.stringify({ type: 'user', name: rowName, login: rowLogin, groups: assignedGroups, perms }));
 
                             document.getElementById('loginPage').classList.add('hidden');
                             document.getElementById('userDashboardPage').classList.remove('hidden');
@@ -1373,6 +1420,7 @@
 
                 if (user === rowLogin && pass === rowPass) {
                     foundUser = true;
+                    localStorage.setItem('daxshat_session', JSON.stringify({ type: 'user', name: rowName, login: rowLogin, groups: assignedGroups, perms: (row.getAttribute('data-perms') || 'students_view,student_add,student_edit,student_delete,excel_export,statistics_view').split(',') }));
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('userDashboardPage').classList.remove('hidden');
                     document.getElementById('userNameDisplay').textContent = rowName;
@@ -1390,6 +1438,7 @@
         }
 
         function handleLogout() {
+            localStorage.removeItem('daxshat_session');
             document.getElementById('dashboardPage').classList.add('hidden');
             document.getElementById('userDashboardPage').classList.add('hidden');
             document.getElementById('loginPage').classList.remove('hidden');
@@ -1487,13 +1536,25 @@
                 <td class="p-3">${orphanCategory}</td>
                 <td class="p-3 flex gap-2">
                     <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
-                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs"><i class="fa-solid fa-trash-can"></i></button>
                 </td>
             `;
             tbody.appendChild(newRow);
-            document.getElementById('studentCountBadge').textContent = `${rowCount} ta`;
+            saveTableToCache('studentsTableBody', 'getStudents');
+
             closeAddStudentModal();
-            alert("Yangi talaba ma'lumoti va rasmi muvaffaqiyatli qo'shildi!");
+        }
+
+        function saveTableToCache(tableId, cacheKey) {
+            const rows = [];
+            const tbody = document.getElementById(tableId);
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach(td => row.push(td.innerText.trim()));
+                if (row.length > 0) rows.push(row);
+            });
+            if (rows.length > 0) saveCache(cacheKey, rows);
         }
 
         async function deleteStudent(button) {
@@ -1510,6 +1571,7 @@
                     }
                 }
                 row.remove();
+                saveTableToCache('studentsTableBody', 'getStudents');
             }
         }
 
@@ -1760,7 +1822,7 @@
                 </td>
             `;
             tbody.appendChild(newRow);
-            updateGroupSelects();
+            saveTableToCache('groupsTableBody', 'getGroups');
             populateStatFilter();
             closeAddGroupModal();
             alert("Yangi guruh muvaffaqiyatli qo'shildi!");
@@ -1791,6 +1853,7 @@
                             r.cells[0].textContent = num++;
                         }
                     });
+                    saveTableToCache('groupsTableBody', 'getGroups');
                     updateGroupSelects();
                     populateStatFilter();
                 }
@@ -1822,3 +1885,4 @@
     </script>
 </body>
 </html>
+
