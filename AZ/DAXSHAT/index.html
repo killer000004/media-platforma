@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -841,16 +841,32 @@
      <script>
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbye3rhzS64M80PD700-PbfwgtBQLgubokpV8W6GP7ePf3FhdL9-_FSnsVv5srAqshr_/exec';
 
+        function saveCache(k, v) { try { localStorage.setItem('cache_' + k, JSON.stringify(v)); } catch(e) {} }
+        function loadCache(k) { try { return JSON.parse(localStorage.getItem('cache_' + k)); } catch(e) { return null; } }
+
         async function apiGet(action) {
+            const url = SHEET_API_URL + '?action=' + encodeURIComponent(action);
             try {
-                const res = await fetch(SHEET_API_URL + '?action=' + encodeURIComponent(action));
-                return await res.json();
-            } catch (e) {
-                return { rows: [] };
-            }
+                const res = await fetch(url, { redirect: 'follow' });
+                if (res.ok) return await res.json();
+            } catch (e) {}
+            try {
+                const res = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.onload = () => resolve(xhr);
+                    xhr.onerror = reject;
+                    xhr.send();
+                });
+                return JSON.parse(res.responseText);
+            } catch (e) {}
+            const cached = loadCache(action);
+            if (cached) return { rows: cached };
+            return { rows: [] };
         }
 
         async function apiPost(data) {
+            const payload = JSON.stringify(data);
             const id = 'frm_' + Date.now();
             const iframe = document.createElement('iframe');
             iframe.name = id; iframe.style.display = 'none';
@@ -858,7 +874,7 @@
             const form = document.createElement('form');
             form.method = 'POST'; form.action = SHEET_API_URL; form.target = id; form.style.display = 'none';
             const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
+            input.type = 'hidden'; input.name = 'payload'; input.value = payload;
             form.appendChild(input);
             document.body.appendChild(form);
             form.submit();
@@ -870,9 +886,21 @@
         }
 
         async function callServer(fn, data) {
-            if (fn === 'getStudentsData') return apiGet('getStudents');
-            if (fn === 'getUsersData') return apiGet('getUsers');
-            if (fn === 'getGroupsData') return apiGet('getGroups');
+            if (fn === 'getStudentsData') {
+                const res = await apiGet('getStudents');
+                if (res && res.rows && res.rows.length > 0) saveCache('getStudents', res.rows);
+                return res;
+            }
+            if (fn === 'getUsersData') {
+                const res = await apiGet('getUsers');
+                if (res && res.rows && res.rows.length > 0) saveCache('getUsers', res.rows);
+                return res;
+            }
+            if (fn === 'getGroupsData') {
+                const res = await apiGet('getGroups');
+                if (res && res.rows && res.rows.length > 0) saveCache('getGroups', res.rows);
+                return res;
+            }
             const map = { addStudent:1, deleteStudent:1, addUser:1, deleteUser:1, updateUserGroups:1, updateUserPerms:1, addGroup:1, deleteGroup:1, updateGroupCourse:1 };
             if (map[fn]) return apiPost({ action: fn, data });
             return { error: 'Unknown: ' + fn };
@@ -1516,13 +1544,25 @@
                 <td class="p-3">${orphanCategory}</td>
                 <td class="p-3 flex gap-2">
                     <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1 rounded text-xs">Tahrirlash</button>
-                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs">O'chirish</button>
+                    <button onclick="deleteStudent(this)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded text-xs"><i class="fa-solid fa-trash-can"></i></button>
                 </td>
             `;
             tbody.appendChild(newRow);
-            document.getElementById('studentCountBadge').textContent = `${rowCount} ta`;
+            saveTableToCache('studentsTableBody', 'getStudents');
+
             closeAddStudentModal();
-            alert("Yangi talaba ma'lumoti va rasmi muvaffaqiyatli qo'shildi!");
+        }
+
+        function saveTableToCache(tableId, cacheKey) {
+            const rows = [];
+            const tbody = document.getElementById(tableId);
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach(td => row.push(td.innerText.trim()));
+                if (row.length > 0) rows.push(row);
+            });
+            if (rows.length > 0) saveCache(cacheKey, rows);
         }
 
         async function deleteStudent(button) {
@@ -1539,6 +1579,7 @@
                     }
                 }
                 row.remove();
+                saveTableToCache('studentsTableBody', 'getStudents');
             }
         }
 
@@ -1789,7 +1830,7 @@
                 </td>
             `;
             tbody.appendChild(newRow);
-            updateGroupSelects();
+            saveTableToCache('groupsTableBody', 'getGroups');
             populateStatFilter();
             closeAddGroupModal();
             alert("Yangi guruh muvaffaqiyatli qo'shildi!");
@@ -1820,6 +1861,7 @@
                             r.cells[0].textContent = num++;
                         }
                     });
+                    saveTableToCache('groupsTableBody', 'getGroups');
                     updateGroupSelects();
                     populateStatFilter();
                 }
@@ -1851,3 +1893,4 @@
     </script>
 </body>
 </html>
+
