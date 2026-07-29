@@ -853,19 +853,32 @@
         }
 
         async function apiPost(data) {
-            try {
-                const formData = new URLSearchParams();
-                formData.append('payload', JSON.stringify(data));
-                await fetch(SHEET_API_URL, {
-                    method: 'POST',
-                    body: formData,
-                    mode: 'no-cors'
-                });
-                return { success: true };
-            } catch (e) {
-                console.warn('API POST xatosi:', e);
-                return { success: false, error: e.message };
-            }
+            return new Promise((resolve) => {
+                const id = 'frame_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const iframe = document.createElement('iframe');
+                iframe.name = id;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = SHEET_API_URL;
+                form.target = id;
+                form.style.display = 'none';
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'payload';
+                input.value = JSON.stringify(data);
+                form.appendChild(input);
+                document.body.appendChild(form);
+                iframe.onload = function() {
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        document.body.removeChild(form);
+                        resolve({ success: true });
+                    }, 100);
+                };
+                form.submit();
+            });
         }
         // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
         function exportToExcel() {
