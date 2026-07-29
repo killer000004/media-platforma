@@ -848,12 +848,18 @@
         }
 
         async function apiPost(data) {
-            const res = await fetch(SHEET_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-                body: JSON.stringify(data)
-            });
-            return await res.json();
+            try {
+                const formData = new URLSearchParams();
+                formData.append('payload', JSON.stringify(data));
+                const res = await fetch(SHEET_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                return await res.json();
+            } catch (e) {
+                console.warn('API POST xatosi:', e);
+                return { success: false, error: e.message };
+            }
         }
         // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
         function exportToExcel() {

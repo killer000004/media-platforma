@@ -38,7 +38,7 @@ function getSheetByNameOrIndex(ss, name, index) {
 }
 
 function doPost(e) {
-  const params = JSON.parse(e.postData.contents);
+  const params = JSON.parse(e.parameter.payload || e.postData.contents);
   const action = params.action || '';
   const ss = getSS();
 
