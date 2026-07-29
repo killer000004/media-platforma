@@ -870,12 +870,17 @@
                 input.value = JSON.stringify(data);
                 form.appendChild(input);
                 document.body.appendChild(form);
+                const timer = setTimeout(() => {
+                    cleanup();
+                    resolve({ success: true });
+                }, 5000);
+                function cleanup() {
+                    clearTimeout(timer);
+                    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                    if (document.body.contains(form)) document.body.removeChild(form);
+                }
                 iframe.onload = function() {
-                    setTimeout(() => {
-                        document.body.removeChild(iframe);
-                        document.body.removeChild(form);
-                        resolve({ success: true });
-                    }, 100);
+                    setTimeout(() => { cleanup(); resolve({ success: true }); }, 100);
                 };
                 form.submit();
             });
