@@ -12,7 +12,7 @@ function doGet(e) {
 
   if (action === 'getUsers') {
     const sheet = ss.getSheetByName('Users');
-    const data = sheet.getDataRange().getValues();
+    const data = sheet.getDataRange(A).getValues();
     const headers = data.shift();
     return ContentService.createTextOutput(JSON.stringify({ headers, rows: data }))
       .setMimeType(ContentService.MimeType.JSON);
