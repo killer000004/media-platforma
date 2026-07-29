@@ -839,7 +839,7 @@
 
     <!-- JavaScript skriptlari -->
      <script>
-        const SHEET_API_URL = 'http://localhost:3001';
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbye3rhzS64M80PD700-PbfwgtBQLgubokpV8W6GP7ePf3FhdL9-_FSnsVv5srAqshr_/exec';
 
         async function apiGet(action) {
             try {
@@ -851,24 +851,10 @@
         }
 
         async function apiPost(data) {
-            return new Promise((resolve) => {
-                const id = 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-                const iframe = document.createElement('iframe');
-                iframe.name = id; iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-                const form = document.createElement('form');
-                form.method = 'POST'; form.action = SHEET_API_URL; form.target = id;
-                form.style.display = 'none';
-                const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
-                form.appendChild(input);
-                document.body.appendChild(form);
-                let cleaned = false;
-                function clean() { if (!cleaned) { cleaned = true; clearTimeout(timer); if (document.body.contains(iframe)) document.body.removeChild(iframe); if (document.body.contains(form)) document.body.removeChild(form); resolve({ success: true }); } }
-                const timer = setTimeout(clean, 3000);
-                iframe.onload = clean;
-                form.submit();
-            });
+            const params = new URLSearchParams();
+            params.append('payload', JSON.stringify(data));
+            fetch(SHEET_API_URL, { method: 'POST', body: params }).catch(() => {});
+            return { success: true };
         }
 
         async function callServer(fn, data) {
