@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Talabalar Ma'lumoti - Prototip</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" onerror="this.media='all'">
+    <style>
+      .hidden { display: none !important; }
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f3f4f6; color: #333; }
+      #loginPage { background: linear-gradient(135deg, #3b82f6, #4338ca); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+      #loginForm { background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 24rem; }
+    </style>
+
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS (Excelga yuklash uchun kutubxona) -->
@@ -577,6 +584,9 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- FOYDALANUVCHI PANELI -->
     <div id="userDashboardPage" class="hidden min-h-screen flex flex-col">
         <header class="bg-white shadow px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -838,31 +848,58 @@
     </div>
 
     <!-- JavaScript skriptlari -->
-     <script>
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwumgDWjK9S75udMmQutWrxRgxwDIc_30acWBsac2T2Y7NVf9CEmzMFx746CbvUFUpP/exec';
+    <script>
+        const SHEET_ID = '1zSsaOgZ1_hwO9CVJR-1B00AUCDgxJ0rQkHnPjBmFwNk';
+        const POST_URL = 'https://script.google.com/macros/s/AKfycbwumgDWjK9S75udMmQutWrxRgxwDIc_30acWBsac2T2Y7NVf9CEmzMFx746CbvUFUpP/exec';
 
         function saveCache(k, v) { try { localStorage.setItem('cache_' + k, JSON.stringify(v)); } catch(e) {} }
         function loadCache(k) { try { return JSON.parse(localStorage.getItem('cache_' + k)); } catch(e) { return null; } }
 
-        async function apiGet(action) {
-            const url = SHEET_API_URL + '?action=' + encodeURIComponent(action);
-            try {
-                const res = await fetch(url, { redirect: 'follow' });
-                if (res.ok) return await res.json();
-            } catch (e) {}
-            try {
-                const res = await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('GET', url, true);
-                    xhr.onload = () => resolve(xhr);
-                    xhr.onerror = reject;
-                    xhr.send();
+        function parseViz(r) {
+            if (!r || r.status !== 'ok' || !r.table) return null;
+            const cols = r.table.cols;
+            let rows = r.table.rows;
+            let headers = cols.map(c => c.label);
+            if (!headers.some(h => h)) {
+                if (!rows.length) return null;
+                headers = (rows[0].c || []).map(c => c ? c.v || '' : '');
+                rows = rows.slice(1);
+            }
+            const dataRows = rows.map(row => {
+                const cells = row.c || [];
+                return cells.map(c => {
+                    if (c === null || c === undefined) return '';
+                    return c.f !== undefined ? c.f : (c.v !== undefined ? String(c.v) : '');
                 });
-                return JSON.parse(res.responseText);
-            } catch (e) {}
-            const cached = loadCache(action);
-            if (cached) return { rows: cached };
-            return { rows: [] };
+            });
+            return { headers, rows: dataRows };
+        }
+
+        let gvizId = 0;
+        function jsonpGet(sheet) {
+            return new Promise((resolve, reject) => {
+                const cb = 'gviz_' + (++gvizId) + '_' + Date.now();
+                window[cb] = function(r) { delete window[cb]; resolve(r); };
+                const s = document.createElement('script');
+                s.src = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=responseHandler:' + cb + '&tq=&sheet=' + encodeURIComponent(sheet);
+                s.onerror = function() { delete window[cb]; reject(); };
+                document.head.appendChild(s);
+            });
+        }
+
+        async function apiGet(action) {
+            const sheetMap = { getStudents:'Students', getUsers:'Users', getGroups:'Groups' };
+            const sheet = sheetMap[action];
+            if (!sheet) return { rows: [] };
+            try {
+                const raw = await jsonpGet(sheet);
+                const res = parseViz(raw);
+                if (res && res.rows && res.rows.length > 0) saveCache(action, res.rows);
+                return res || { rows: [] };
+            } catch (e) {
+                const cached = loadCache(action);
+                return cached ? { rows: cached } : { rows: [] };
+            }
         }
 
         async function apiPost(data) {
@@ -872,7 +909,7 @@
             iframe.name = id; iframe.style.display = 'none';
             document.body.appendChild(iframe);
             const form = document.createElement('form');
-            form.method = 'POST'; form.action = SHEET_API_URL; form.target = id; form.style.display = 'none';
+            form.method = 'POST'; form.action = POST_URL; form.target = id; form.style.display = 'none';
             const input = document.createElement('input');
             input.type = 'hidden'; input.name = 'payload'; input.value = payload;
             form.appendChild(input);
@@ -886,23 +923,11 @@
         }
 
         async function callServer(fn, data) {
-            if (fn === 'getStudentsData') {
-                const res = await apiGet('getStudents');
-                if (res && res.rows && res.rows.length > 0) saveCache('getStudents', res.rows);
-                return res;
-            }
-            if (fn === 'getUsersData') {
-                const res = await apiGet('getUsers');
-                if (res && res.rows && res.rows.length > 0) saveCache('getUsers', res.rows);
-                return res;
-            }
-            if (fn === 'getGroupsData') {
-                const res = await apiGet('getGroups');
-                if (res && res.rows && res.rows.length > 0) saveCache('getGroups', res.rows);
-                return res;
-            }
-            const map = { addStudent:1, deleteStudent:1, addUser:1, deleteUser:1, updateUserGroups:1, updateUserPerms:1, addGroup:1, deleteGroup:1, updateGroupCourse:1 };
-            if (map[fn]) return apiPost({ action: fn, data });
+            if (fn === 'getStudentsData') return apiGet('getStudents');
+            if (fn === 'getUsersData') return apiGet('getUsers');
+            if (fn === 'getGroupsData') return apiGet('getGroups');
+            const writeOps = { addStudent:1, deleteStudent:1, addUser:1, deleteUser:1, updateUserGroups:1, updateUserPerms:1, addGroup:1, deleteGroup:1, updateGroupCourse:1 };
+            if (writeOps[fn]) return apiPost({ action: fn, data });
             return { error: 'Unknown: ' + fn };
         }
         // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
@@ -1381,6 +1406,15 @@
             const pass = document.getElementById('password').value.trim();
             const errorText = document.getElementById('loginError');
 
+            if (user === 'AZIZ123' && pass === 'AZIZ123') {
+                localStorage.setItem('daxshat_session', JSON.stringify({ type: 'admin', name: 'AZIZ123' }));
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.remove('hidden');
+                showSection('students');
+                loadAllData();
+                return;
+            }
+
             try {
                 const res = await callServer('getUsersData');
                 if (res.rows) {
@@ -1504,7 +1538,7 @@
 
             const rowData = [photoSrc, fullName, birthDate, gender, group, phone, birthPlace, address, housing, father, mother, familyStatus, socialCategory, orphanCategory];
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            {
                 try {
                     const res = await callServer('addStudent', rowData);
                     if (!res.success) throw new Error(res.error || 'Xatolik');
@@ -1563,7 +1597,7 @@
                 const name = row.querySelector('td:nth-child(3)').textContent.trim();
                 const group = row.querySelector('td:nth-child(6)').textContent.trim();
 
-                if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+                {
                     try {
                         await callServer('deleteStudent', { name, group });
                     } catch (e) {
@@ -1607,7 +1641,7 @@
 
             const userData = { name, login, pass, groups: groupsStr };
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            {
                 try {
                     const res = await callServer('addUser', userData);
                     if (!res.success) throw new Error(res.error || 'Xatolik');
@@ -1654,7 +1688,7 @@
                 const row = button.closest('tr');
                 const login = row.getAttribute('data-login') || '';
 
-                if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
+                if (login) {
                     try {
                         await callServer('deleteUser', { login });
                     } catch (e) {
@@ -1702,7 +1736,7 @@
             const groupsStr = groups.join(',');
             const login = editTargetRow.getAttribute('data-login') || '';
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
+            if (login) {
                 try {
                     await callServer('updateUserGroups', { login, groups: groupsStr });
                 } catch (e) {
@@ -1745,7 +1779,7 @@
             const perms = Array.from(checked).map(cb => cb.value).join(',');
             const login = permsTargetRow.getAttribute('data-login') || '';
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
+            if (login) {
                 try {
                     await callServer('updateUserPerms', { login, perms });
                 } catch (e) {
@@ -1767,7 +1801,7 @@
             const gDir = document.getElementById('newGroupDirection').value;
             const gCourse = document.getElementById('newGroupCourse').value;
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            {
                 try {
                     const res = await callServer('addGroup', { name: gName, direction: gDir, course: gCourse });
                     if (!res.success) throw new Error(res.error || 'Xatolik');
@@ -1835,7 +1869,7 @@
                     const gName = row.querySelector('td:nth-child(2)').textContent.trim();
                     const gDir = row.querySelector('td:nth-child(3)').textContent.trim();
 
-                    if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+                    {
                         try {
                             await callServer('deleteGroup', { name: gName, direction: gDir });
                         } catch (e) {
@@ -1868,7 +1902,7 @@
             const gName = row.querySelector('td:nth-child(2)').textContent.trim();
             const gDir = row.querySelector('td:nth-child(3)').textContent.trim();
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            {
                 try {
                     await callServer('updateGroupCourse', { name: gName, direction: gDir, course: courseVal + '-kurs' });
                 } catch (e) {
