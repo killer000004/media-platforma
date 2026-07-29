@@ -25,8 +25,8 @@
             </div>
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Login</label>
-                    <input type="text" id="username" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Loginni kiriting">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Foydalanuvchi nomi</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Foydalanuvchi nomini kiriting">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Parol</label>
@@ -51,7 +51,7 @@
 
             <!-- Tugmalar guruhi -->
             <div class="flex flex-wrap items-center gap-2">
-                <span class="bg-purple-700 text-white text-xs px-3 py-1.5 rounded font-medium">admin (superadmin)</span>
+                <span class="bg-purple-700 text-white text-xs px-3 py-1.5 rounded font-medium">Boshqaruvchi</span>
                 <button onclick="showSection('users')" class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5 rounded transition">Foydalanuvchilar</button>
                 <button onclick="showSection('groups')" class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1.5 rounded transition">Guruhlar</button>
                 <button onclick="showSection('statistics')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-3 py-1.5 rounded transition">Statistika</button>
@@ -137,7 +137,7 @@
                     <thead>
                         <tr class="bg-gray-50 border-b text-gray-600">
                             <th class="p-3">#</th>
-                            <th class="p-3">F.I.Sh / Login</th>
+                            <th class="p-3">F.I.Sh / Kirish nomi</th>
                             <th class="p-3">Rol</th>
                             <th class="p-3">Biriktirilgan guruhlar</th>
                             <th class="p-3 text-center">Amallar</th>
@@ -147,7 +147,7 @@
                         <tr class="hover:bg-gray-50" data-login="jasur_user" data-pass="12345" data-groups="Iqtisodiyot / ECO 24-02" data-perms="students_view,student_add,student_edit,student_delete,excel_export,statistics_view">
                             <td class="p-3">1</td>
                             <td class="p-3 font-medium">Jasur Bekmurodov <br><span class="text-xs text-gray-400">jasur_user</span></td>
-                            <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">User</span></td>
+<td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">Foydalanuvchi</span></td>
                             <td class="p-3">
                                 <div class="flex flex-wrap gap-1">
                                     <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">Iqtisodiyot / ECO 24-02</span>
@@ -583,7 +583,7 @@
                 <h1 class="text-xl font-bold text-blue-600">Talabalar ma'lumoti (<span id="userGroupNameDisplay" class="text-purple-600">Guruh</span>)</h1>
             </div>
             <div class="flex items-center gap-3">
-                <span id="userNameDisplay" class="bg-blue-100 text-blue-700 text-xs px-3 py-1.5 rounded font-medium">User</span>
+                <span id="userNameDisplay" class="bg-blue-100 text-blue-700 text-xs px-3 py-1.5 rounded font-medium">Foydalanuvchi</span>
                 <button onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition">Chiqish</button>
             </div>
         </header>
@@ -715,7 +715,7 @@
                     <input type="text" id="newUserName" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masalan: Alisher Vahobov">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kirish nomi</label>
                     <input type="text" id="newUserLogin" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Loginni kiriting">
                 </div>
                 <div>
@@ -1235,7 +1235,7 @@
                         tr.innerHTML = `
                             <td class="p-3">${i + 1}</td>
                             <td class="p-3 font-medium">${row[0] || ''} <br><span class="text-xs text-gray-400">${row[1] || ''}</span></td>
-                            <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">User</span></td>
+                            <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">Foydalanuvchi</span></td>
                             <td class="p-3"><div class="flex flex-wrap gap-1">${badges}</div></td>
                             <td class="p-3 text-center">
                                 <div class="flex items-center justify-center gap-1">
@@ -1557,7 +1557,7 @@
             newRow.innerHTML = `
                 <td class="p-3">${rowCount}</td>
                 <td class="p-3 font-medium">${name} <br><span class="text-xs text-gray-400">${login}</span></td>
-                <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">User</span></td>
+                <td class="p-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">Foydalanuvchi</span></td>
                 <td class="p-3"><div class="flex flex-wrap gap-1">${badgesHtml}</div></td>
                 <td class="p-3 text-center">
                     <div class="flex items-center justify-center gap-1">
