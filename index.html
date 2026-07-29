@@ -608,7 +608,7 @@
                     <tbody class="divide-y divide-gray-200">
                         <tr class="hover:bg-gray-50">
                             <td class="p-3">1</td>
-                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                            <td class="p-3"><img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full object-cover shadow" onerror="this.style.display='none'" alt="Rasm"></td>
                             <td class="p-3 font-medium">Ahmadov Ahadbek Shermatboy o'g'li</td>
                             <td class="p-3">2005-12-07</td>
                             <td class="p-3">Erkak</td>
@@ -1238,7 +1238,7 @@
                         const photo = row[0] || 'https://via.placeholder.com/40';
                         tr.innerHTML = `
                             <td class="p-3">${i + 1}</td>
-                            <td class="p-3"><img src="${photo}" class="w-10 h-10 rounded-full object-cover shadow"></td>
+                            <td class="p-3"><img src="${photo}" class="w-10 h-10 rounded-full object-cover shadow" onerror="this.style.display='none'"></td>
                             <td class="p-3 font-medium">${row[1] || ''}</td>
                             <td class="p-3">${row[2] || ''}</td>
                             <td class="p-3">${row[3] || ''}</td>
@@ -1520,7 +1520,7 @@
             newRow.className = "hover:bg-gray-50";
             newRow.innerHTML = `
                 <td class="p-3">${rowCount}</td>
-                <td class="p-3"><img src="${photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" alt="Rasm"></td>
+                <td class="p-3"><img src="${photoSrc}" class="w-10 h-10 rounded-full object-cover shadow" onerror="this.style.display='none'" alt="Rasm"></td>
                 <td class="p-3 font-medium">${fullName}</td>
                 <td class="p-3">${birthDate}</td>
                 <td class="p-3">${gender}</td>
