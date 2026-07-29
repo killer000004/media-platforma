@@ -840,22 +840,28 @@
     <!-- JavaScript skriptlari -->
     <script>
         // GOOGLE SHEETS API SOZLAMALARI
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxoTraeMoruQgBJOTgpYFpyBmxhDFX0DXcRHx4JTxcglMMgTujC4ZW3V4-RS4Q3v_R1/exec'; // Google Apps Script web app URL
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbye3rhzS64M80PD700-PbfwgtBQLgubokpV8W6GP7ePf3FhdL9-_FSnsVv5srAqshr_/exec'; // Google Apps Script web app URL
 
         async function apiGet(action) {
-            const res = await fetch(SHEET_API_URL + '?action=' + action);
-            return await res.json();
+            try {
+                const res = await fetch(SHEET_API_URL + '?action=' + encodeURIComponent(action));
+                return await res.json();
+            } catch (e) {
+                console.warn('API GET xatosi:', e);
+                return { rows: [] };
+            }
         }
 
         async function apiPost(data) {
             try {
                 const formData = new URLSearchParams();
                 formData.append('payload', JSON.stringify(data));
-                const res = await fetch(SHEET_API_URL, {
+                await fetch(SHEET_API_URL, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    mode: 'no-cors'
                 });
-                return await res.json();
+                return { success: true };
             } catch (e) {
                 console.warn('API POST xatosi:', e);
                 return { success: false, error: e.message };

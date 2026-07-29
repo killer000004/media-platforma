@@ -38,7 +38,12 @@ function getSheetByNameOrIndex(ss, name, index) {
 }
 
 function doPost(e) {
-  const params = JSON.parse(e.parameter.payload || e.postData.contents);
+  const raw = e.postData.contents;
+  let jsonStr = raw;
+  if (raw.indexOf('payload=') === 0) {
+    jsonStr = decodeURIComponent(raw.substring(8).replace(/\+/g, ' '));
+  }
+  const params = JSON.parse(jsonStr);
   const action = params.action || '';
   const ss = getSS();
 
