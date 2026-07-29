@@ -850,7 +850,7 @@
         async function apiPost(data) {
             const res = await fetch(SHEET_API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
                 body: JSON.stringify(data)
             });
             return await res.json();
