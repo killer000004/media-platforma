@@ -1,42 +1,49 @@
+const SHEET_ID = '1q79wrM9kEVWaalvsPVUBZqAyKUl4OToH_QRIF3DtKTA';
+
+function getSS() {
+  return SpreadsheetApp.openById(SHEET_ID) || SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function doGet(e) {
   const action = e?.parameter?.action || '';
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
+  const ss = getSS();
+  const allSheets = ss.getSheets().map(s => s.getName());
   if (action === 'getStudents') {
-    const sheet = ss.getSheetByName('Students');
+    const sheet = ss.getSheetByName('Students') || ss.getSheets()[0];
     const data = sheet.getDataRange().getValues();
     const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    return ContentService.createTextOutput(JSON.stringify({ rows, sheets: allSheets }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-
   if (action === 'getUsers') {
-    const sheet = ss.getSheetByName('Users');
+    const sheet = ss.getSheetByName('Users') || ss.getSheets()[1];
     const data = sheet.getDataRange().getValues();
     const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    return ContentService.createTextOutput(JSON.stringify({ rows, sheets: allSheets }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-
   if (action === 'getGroups') {
-    const sheet = ss.getSheetByName('Groups');
+    const sheet = ss.getSheetByName('Groups') || ss.getSheets()[2];
     const data = sheet.getDataRange().getValues();
     const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    return ContentService.createTextOutput(JSON.stringify({ rows, sheets: allSheets }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-
-  return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
+  return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action', sheets: allSheets }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheetByNameOrIndex(ss, name, index) {
+  return ss.getSheetByName(name) || ss.getSheets()[index];
 }
 
 function doPost(e) {
   const params = JSON.parse(e.postData.contents);
   const action = params.action || '';
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
 
   if (action === 'addStudent') {
-    const sheet = ss.getSheetByName('Students');
+    const sheet = getSheetByNameOrIndex(ss, 'Students', 0);
     const data = params.data || [];
     sheet.appendRow(data);
     return ContentService.createTextOutput(JSON.stringify({ success: true }))
@@ -44,7 +51,7 @@ function doPost(e) {
   }
 
   if (action === 'deleteStudent') {
-    const sheet = ss.getSheetByName('Students');
+    const sheet = getSheetByNameOrIndex(ss, 'Students', 0);
     const allData = sheet.getDataRange().getValues();
     const targetName = (params.data?.name || '').trim();
     const targetGroup = (params.data?.group || '').trim();
@@ -61,7 +68,7 @@ function doPost(e) {
   }
 
   if (action === 'addUser') {
-    const sheet = ss.getSheetByName('Users');
+    const sheet = getSheetByNameOrIndex(ss, 'Users', 1);
     const d = params.data || {};
     const perms = d.perms || 'students_view,student_add,student_edit,student_delete,excel_export,statistics_view';
     sheet.appendRow([d.name || '', d.login || '', d.pass || '', d.groups || '', perms]);
@@ -70,7 +77,7 @@ function doPost(e) {
   }
 
   if (action === 'deleteUser') {
-    const sheet = ss.getSheetByName('Users');
+    const sheet = getSheetByNameOrIndex(ss, 'Users', 1);
     const allData = sheet.getDataRange().getValues();
     const targetLogin = (params.data?.login || '').trim();
     for (let i = allData.length - 1; i >= 0; i--) {
@@ -85,7 +92,7 @@ function doPost(e) {
   }
 
   if (action === 'updateUserGroups') {
-    const sheet = ss.getSheetByName('Users');
+    const sheet = getSheetByNameOrIndex(ss, 'Users', 1);
     const allData = sheet.getDataRange().getValues();
     const targetLogin = (params.data?.login || '').trim();
     const newGroups = params.data?.groups || '';
@@ -101,7 +108,7 @@ function doPost(e) {
   }
 
   if (action === 'updateUserPerms') {
-    const sheet = ss.getSheetByName('Users');
+    const sheet = getSheetByNameOrIndex(ss, 'Users', 1);
     const allData = sheet.getDataRange().getValues();
     const targetLogin = (params.data?.login || '').trim();
     const newPerms = params.data?.perms || '';
@@ -117,7 +124,7 @@ function doPost(e) {
   }
 
   if (action === 'addGroup') {
-    const sheet = ss.getSheetByName('Groups');
+    const sheet = getSheetByNameOrIndex(ss, 'Groups', 2);
     const d = params.data || {};
     sheet.appendRow([d.name || '', d.direction || '', d.course || '']);
     return ContentService.createTextOutput(JSON.stringify({ success: true }))
@@ -125,7 +132,7 @@ function doPost(e) {
   }
 
   if (action === 'deleteGroup') {
-    const sheet = ss.getSheetByName('Groups');
+    const sheet = getSheetByNameOrIndex(ss, 'Groups', 2);
     const allData = sheet.getDataRange().getValues();
     const targetName = (params.data?.name || '').trim();
     const targetDir = (params.data?.direction || '').trim();
@@ -142,7 +149,7 @@ function doPost(e) {
   }
 
   if (action === 'updateGroupCourse') {
-    const sheet = ss.getSheetByName('Groups');
+    const sheet = getSheetByNameOrIndex(ss, 'Groups', 2);
     const allData = sheet.getDataRange().getValues();
     const targetName = (params.data?.name || '').trim();
     const targetDir = (params.data?.direction || '').trim();
