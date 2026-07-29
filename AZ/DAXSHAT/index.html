@@ -838,52 +838,46 @@
     </div>
 
     <!-- JavaScript skriptlari -->
-    <script>
-        // GOOGLE SHEETS API SOZLAMALARI
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbye3rhzS64M80PD700-PbfwgtBQLgubokpV8W6GP7ePf3FhdL9-_FSnsVv5srAqshr_/exec'; // Google Apps Script web app URL
+     <script>
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbye3rhzS64M80PD700-PbfwgtBQLgubokpV8W6GP7ePf3FhdL9-_FSnsVv5srAqshr_/exec';
 
         async function apiGet(action) {
             try {
                 const res = await fetch(SHEET_API_URL + '?action=' + encodeURIComponent(action));
                 return await res.json();
             } catch (e) {
-                console.warn('API GET xatosi:', e);
                 return { rows: [] };
             }
         }
 
         async function apiPost(data) {
             return new Promise((resolve) => {
-                const id = 'frame_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const id = 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
                 const iframe = document.createElement('iframe');
-                iframe.name = id;
-                iframe.style.display = 'none';
+                iframe.name = id; iframe.style.display = 'none';
                 document.body.appendChild(iframe);
                 const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = SHEET_API_URL;
-                form.target = id;
+                form.method = 'POST'; form.action = SHEET_API_URL; form.target = id;
                 form.style.display = 'none';
                 const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'payload';
-                input.value = JSON.stringify(data);
+                input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
                 form.appendChild(input);
                 document.body.appendChild(form);
-                const timer = setTimeout(() => {
-                    cleanup();
-                    resolve({ success: true });
-                }, 5000);
-                function cleanup() {
-                    clearTimeout(timer);
-                    if (document.body.contains(iframe)) document.body.removeChild(iframe);
-                    if (document.body.contains(form)) document.body.removeChild(form);
-                }
-                iframe.onload = function() {
-                    setTimeout(() => { cleanup(); resolve({ success: true }); }, 100);
-                };
+                let cleaned = false;
+                function clean() { if (!cleaned) { cleaned = true; clearTimeout(timer); if (document.body.contains(iframe)) document.body.removeChild(iframe); if (document.body.contains(form)) document.body.removeChild(form); resolve({ success: true }); } }
+                const timer = setTimeout(clean, 3000);
+                iframe.onload = clean;
                 form.submit();
             });
+        }
+
+        async function callServer(fn, data) {
+            if (fn === 'getStudentsData') return apiGet('getStudents');
+            if (fn === 'getUsersData') return apiGet('getUsers');
+            if (fn === 'getGroupsData') return apiGet('getGroups');
+            const map = { addStudent:1, deleteStudent:1, addUser:1, deleteUser:1, updateUserGroups:1, updateUserPerms:1, addGroup:1, deleteGroup:1, updateGroupCourse:1 };
+            if (map[fn]) return apiPost({ action: fn, data });
+            return { error: 'Unknown: ' + fn };
         }
         // --- TALABALAR MA'LUMOTINI EXCELGA YUKLASH FUNKSIYASI (RASM HAVOLASI BILAN) ---
         function exportToExcel() {
@@ -1195,22 +1189,15 @@
         }
 
         window.onload = function() {
-            if (SHEET_API_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-                // API kalit sozlanmagan — offlayn rejimda ishlaydi
-                updateGroupSelects();
-                populateStatFilter();
-                filterStats('');
-                return;
-            }
             loadAllData();
         };
 
         async function loadAllData() {
             try {
                 const [studentsRes, usersRes, groupsRes] = await Promise.all([
-                    apiGet('getStudents'),
-                    apiGet('getUsers'),
-                    apiGet('getGroups')
+                    callServer('getStudentsData'),
+                    callServer('getUsersData'),
+                    callServer('getGroupsData')
                 ]);
 
                 // Talabalar jadvalini to'ldirish
@@ -1349,10 +1336,9 @@
                 return;
             }
 
-            if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
-                try {
-                    const res = await apiGet('getUsers');
-                    if (res.rows) {
+            try {
+                const res = await callServer('getUsersData');
+                if (res.rows) {
                         const match = res.rows.find(r => (r[1] || '').trim() === user && (r[2] || '').trim() === pass);
                         if (match) {
                             const rowName = match[0] || '';
@@ -1374,7 +1360,6 @@
                 } catch (e) {
                     console.warn('API login failed, falling back to DOM', e);
                 }
-            }
 
             let foundUser = false;
             const rows = document.querySelectorAll('#usersTableBody tr');
@@ -1472,7 +1457,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                 try {
-                    const res = await apiPost({ action: 'addStudent', data: rowData });
+                    const res = await callServer('addStudent', rowData);
                     if (!res.success) throw new Error(res.error || 'Xatolik');
                 } catch (e) {
                     console.warn('API saqlashda xatolik, faqat DOM ga qo\'shiladi', e);
@@ -1519,7 +1504,7 @@
 
                 if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                     try {
-                        await apiPost({ action: 'deleteStudent', data: { name, group } });
+                        await callServer('deleteStudent', { name, group });
                     } catch (e) {
                         console.warn('API o\'chirishda xatolik', e);
                     }
@@ -1562,7 +1547,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                 try {
-                    const res = await apiPost({ action: 'addUser', data: userData });
+                    const res = await callServer('addUser', userData);
                     if (!res.success) throw new Error(res.error || 'Xatolik');
                 } catch (e) {
                     console.warn('API saqlashda xatolik, faqat DOM ga qo\'shiladi', e);
@@ -1609,7 +1594,7 @@
 
                 if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
                     try {
-                        await apiPost({ action: 'deleteUser', data: { login } });
+                        await callServer('deleteUser', { login });
                     } catch (e) {
                         console.warn('API o\'chirishda xatolik', e);
                     }
@@ -1657,7 +1642,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
                 try {
-                    await apiPost({ action: 'updateUserGroups', data: { login, groups: groupsStr } });
+                    await callServer('updateUserGroups', { login, groups: groupsStr });
                 } catch (e) {
                     console.warn('API yangilashda xatolik', e);
                 }
@@ -1700,7 +1685,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE' && login) {
                 try {
-                    await apiPost({ action: 'updateUserPerms', data: { login, perms } });
+                    await callServer('updateUserPerms', { login, perms });
                 } catch (e) {
                     console.warn('API yangilashda xatolik', e);
                 }
@@ -1722,7 +1707,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                 try {
-                    const res = await apiPost({ action: 'addGroup', data: { name: gName, direction: gDir, course: gCourse } });
+                    const res = await callServer('addGroup', { name: gName, direction: gDir, course: gCourse });
                     if (!res.success) throw new Error(res.error || 'Xatolik');
                 } catch (e) {
                     console.warn('API saqlashda xatolik, faqat DOM ga qo\'shiladi', e);
@@ -1790,7 +1775,7 @@
 
                     if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                         try {
-                            await apiPost({ action: 'deleteGroup', data: { name: gName, direction: gDir } });
+                            await callServer('deleteGroup', { name: gName, direction: gDir });
                         } catch (e) {
                             console.warn('API o\'chirishda xatolik', e);
                         }
@@ -1822,7 +1807,7 @@
 
             if (SHEET_API_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
                 try {
-                    await apiPost({ action: 'updateGroupCourse', data: { name: gName, direction: gDir, course: courseVal + '-kurs' } });
+                    await callServer('updateGroupCourse', { name: gName, direction: gDir, course: courseVal + '-kurs' });
                 } catch (e) {
                     console.warn('API yangilashda xatolik', e);
                 }
