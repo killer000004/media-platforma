@@ -853,8 +853,8 @@
         async function apiPost(data) {
             const params = new URLSearchParams();
             params.append('payload', JSON.stringify(data));
-            fetch(SHEET_API_URL, { method: 'POST', body: params }).catch(() => {});
-            return { success: true };
+            const res = await fetch(SHEET_API_URL, { method: 'POST', body: params });
+            return await res.json();
         }
 
         async function callServer(fn, data) {
@@ -1223,8 +1223,8 @@
 
                 // Foydalanuvchilar jadvalini to'ldirish
                 const usBody = document.getElementById('usersTableBody');
-                usBody.innerHTML = '';
-                if (usersRes.rows) {
+                if (usersRes.rows && usersRes.rows.length > 0) {
+                    usBody.innerHTML = '';
                     usersRes.rows.forEach((row, i) => {
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-gray-50';
@@ -1255,8 +1255,8 @@
 
                 // Guruhlar jadvalini to'ldirish
                 const grBody = document.getElementById('groupsTableBody');
-                grBody.innerHTML = '';
-                if (groupsRes.rows) {
+                if (groupsRes.rows && groupsRes.rows.length > 0) {
+                    grBody.innerHTML = '';
                     groupsRes.rows.forEach((row, i) => {
                         const gName = row[0] || '';
                         const gDir = row[1] || '';
