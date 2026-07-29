@@ -851,10 +851,22 @@
         }
 
         async function apiPost(data) {
-            const params = new URLSearchParams();
-            params.append('payload', JSON.stringify(data));
-            const res = await fetch(SHEET_API_URL, { method: 'POST', body: params });
-            return await res.json();
+            const id = 'frm_' + Date.now();
+            const iframe = document.createElement('iframe');
+            iframe.name = id; iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            const form = document.createElement('form');
+            form.method = 'POST'; form.action = SHEET_API_URL; form.target = id; form.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+            setTimeout(() => {
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                if (document.body.contains(form)) document.body.removeChild(form);
+            }, 5000);
+            return { success: true };
         }
 
         async function callServer(fn, data) {

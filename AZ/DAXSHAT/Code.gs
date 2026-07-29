@@ -38,10 +38,18 @@ function handleJsonApi(e) {
 }
 
 function doPost(e) {
-  const raw = e.postData.contents;
-  let jsonStr = raw;
-  if (raw.indexOf('payload=') === 0) {
-    jsonStr = decodeURIComponent(raw.substring(8).replace(/\+/g, ' '));
+  let jsonStr;
+  if (e.postData && e.postData.contents) {
+    const raw = e.postData.contents;
+    if (raw.indexOf('payload=') === 0) {
+      jsonStr = decodeURIComponent(raw.substring(8).replace(/\+/g, ' '));
+    } else {
+      jsonStr = raw;
+    }
+  } else if (e.parameter && e.parameter.payload) {
+    jsonStr = e.parameter.payload;
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'No data' })).setMimeType(ContentService.MimeType.JSON);
   }
   const params = JSON.parse(jsonStr);
   const result = executeAction(params);
