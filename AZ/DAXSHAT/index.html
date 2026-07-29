@@ -1381,15 +1381,6 @@
             const pass = document.getElementById('password').value.trim();
             const errorText = document.getElementById('loginError');
 
-            if (user === 'AZIZ' && pass === 'AZIZ') {
-                localStorage.setItem('daxshat_session', JSON.stringify({ type: 'admin' }));
-                document.getElementById('loginPage').classList.add('hidden');
-                document.getElementById('dashboardPage').classList.remove('hidden');
-                showSection('students');
-                loadAllData();
-                return;
-            }
-
             try {
                 const res = await callServer('getUsersData');
                 if (res.rows) {
