@@ -1187,7 +1187,9 @@
         }
 
         window.onload = function() {
-            loadAllData();
+            if (!applySavedSession()) {
+                loadAllData();
+            }
         };
 
         async function loadAllData() {
@@ -1321,6 +1323,30 @@
             }
         }
 
+        function applySavedSession() {
+            const s = JSON.parse(localStorage.getItem('daxshat_session'));
+            if (!s) return false;
+            if (s.type === 'admin') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.remove('hidden');
+                showSection('students');
+                loadAllData();
+                return true;
+            }
+            if (s.type === 'user') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('userDashboardPage').classList.remove('hidden');
+                document.getElementById('userNameDisplay').textContent = s.name || '';
+                document.getElementById('userGroupNameDisplay').textContent = (s.groups || []).join(', ');
+                document.querySelectorAll('#userDashboardPage [data-perm]').forEach(el => {
+                    el.style.display = (s.perms || []).includes(el.getAttribute('data-perm')) ? '' : 'none';
+                });
+                loadAllData();
+                return true;
+            }
+            return false;
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
             const user = document.getElementById('username').value.trim();
@@ -1328,6 +1354,7 @@
             const errorText = document.getElementById('loginError');
 
             if (user === 'AZIZ' && pass === 'AZIZ') {
+                localStorage.setItem('daxshat_session', JSON.stringify({ type: 'admin' }));
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('dashboardPage').classList.remove('hidden');
                 showSection('students');
@@ -1344,6 +1371,8 @@
                             const groupsData = match[3] || '';
                             const assignedGroups = groupsData ? groupsData.split(',').filter(Boolean) : ['Biriktirilmagan'];
                             const perms = (match[4] || 'students_view,student_add,student_edit,student_delete,excel_export,statistics_view').split(',');
+
+                            localStorage.setItem('daxshat_session', JSON.stringify({ type: 'user', name: rowName, login: rowLogin, groups: assignedGroups, perms }));
 
                             document.getElementById('loginPage').classList.add('hidden');
                             document.getElementById('userDashboardPage').classList.remove('hidden');
@@ -1371,6 +1400,7 @@
 
                 if (user === rowLogin && pass === rowPass) {
                     foundUser = true;
+                    localStorage.setItem('daxshat_session', JSON.stringify({ type: 'user', name: rowName, login: rowLogin, groups: assignedGroups, perms: (row.getAttribute('data-perms') || 'students_view,student_add,student_edit,student_delete,excel_export,statistics_view').split(',') }));
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('userDashboardPage').classList.remove('hidden');
                     document.getElementById('userNameDisplay').textContent = rowName;
@@ -1388,6 +1418,7 @@
         }
 
         function handleLogout() {
+            localStorage.removeItem('daxshat_session');
             document.getElementById('dashboardPage').classList.add('hidden');
             document.getElementById('userDashboardPage').classList.add('hidden');
             document.getElementById('loginPage').classList.remove('hidden');
