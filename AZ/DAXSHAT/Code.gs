@@ -30,13 +30,23 @@ function doGet(e) {
   if (action === 'getUsers') {
     var sheet = getSheetByNameOrIndex(ss, 'Users', 1);
     var data = sheet.getDataRange().getValues();
-    var rows = data.filter(function(r) { return r.join('').trim() !== ''; });
+    var rows = data.filter(function(r) {
+      var joined = r.join('').trim();
+      if (joined === '') return false;
+      if (typeof r[1] === 'string' && (r[1].indexOf('Login') !== -1 || r[1].indexOf('login') !== -1)) return false;
+      return true;
+    });
     return ContentService.createTextOutput(JSON.stringify({ rows: rows, sheets: allSheets })).setMimeType(ContentService.MimeType.JSON);
   }
   if (action === 'getGroups') {
     var sheet = getSheetByNameOrIndex(ss, 'Groups', 2);
     var data = sheet.getDataRange().getValues();
-    var rows = data.filter(function(r) { return r.join('').trim() !== ''; });
+    var rows = data.filter(function(r) {
+      var joined = r.join('').trim();
+      if (joined === '') return false;
+      if (typeof r[0] === 'string' && r[0].indexOf('Guruh') !== -1) return false;
+      return true;
+    });
     return ContentService.createTextOutput(JSON.stringify({ rows: rows, sheets: allSheets })).setMimeType(ContentService.MimeType.JSON);
   }
   return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action', sheets: allSheets })).setMimeType(ContentService.MimeType.JSON);
