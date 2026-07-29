@@ -5,24 +5,24 @@ function doGet(e) {
   if (action === 'getStudents') {
     const sheet = ss.getSheetByName('Students');
     const data = sheet.getDataRange().getValues();
-    const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    const headers = data.shift();
+    return ContentService.createTextOutput(JSON.stringify({ headers, rows: data }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   if (action === 'getUsers') {
     const sheet = ss.getSheetByName('Users');
     const data = sheet.getDataRange().getValues();
-    const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    const headers = data.shift();
+    return ContentService.createTextOutput(JSON.stringify({ headers, rows: data }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   if (action === 'getGroups') {
     const sheet = ss.getSheetByName('Groups');
     const data = sheet.getDataRange().getValues();
-    const rows = data.filter(r => r.join('').trim() !== '');
-    return ContentService.createTextOutput(JSON.stringify({ rows }))
+    const headers = data.shift();
+    return ContentService.createTextOutput(JSON.stringify({ headers, rows: data }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
